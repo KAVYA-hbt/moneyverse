@@ -1,0 +1,223 @@
+.it-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+}
+
+.it-spotlight {
+  position: fixed;
+  border-radius: 14px;
+  border: 2px solid rgba(139, 92, 246, 0.9);
+  box-shadow: 0 0 0 9999px rgba(3, 5, 9, 0.6), 0 0 24px rgba(139, 92, 246, 0.7);
+  pointer-events: none;
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  animation: it-spotlight-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes it-spotlight-pulse {
+  0%, 100% { border-color: rgba(139, 92, 246, 0.9); }
+  50% { border-color: rgba(59, 130, 246, 0.9); }
+}
+
+.it-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 9, 0.45);
+}
+
+.it-pointer {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  font-size: 20px;
+  color: #8b5cf6;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.9);
+  pointer-events: none;
+  z-index: 1;
+  animation: it-pointer-bob 1s ease-in-out infinite;
+}
+
+.it-pointer--below {
+  transform: translate(-50%, 0);
+  animation-name: it-pointer-bob-below;
+}
+
+@keyframes it-pointer-bob {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: -8px; }
+}
+
+@keyframes it-pointer-bob-below {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: 8px; }
+}
+
+.it-card {
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(155deg, rgba(20, 12, 46, 0.98) 0%, rgba(10, 6, 26, 0.98) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.55);
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 0 28px rgba(88, 28, 235, 0.3), 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.it-icon-badge {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
+}
+
+.it-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.it-title {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  color: #eaf1fb;
+}
+
+.it-text {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  min-height: 40px;
+}
+
+.it-caret {
+  display: inline-block;
+  color: #8b5cf6;
+  animation: it-blink 0.8s steps(1) infinite;
+}
+
+@keyframes it-blink {
+  50% { opacity: 0; }
+}
+
+.it-progress {
+  display: flex;
+  gap: 4px;
+}
+
+.it-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.it-dot--done {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+.it-dot--active {
+  background: #8b5cf6;
+  transform: scale(1.4);
+}
+
+.it-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.it-skip-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.it-next-btn {
+  padding: 8px 22px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .it-card {
+    max-width: 340px;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .it-icon-badge {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .it-title {
+    font-size: 12px;
+  }
+
+  .it-text {
+    font-size: 11px;
+    min-height: 30px;
+  }
+
+  .it-next-btn {
+    padding: 6px 16px;
+    font-size: 11px;
+  }
+
+  .it-skip-btn {
+    font-size: 10px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+  .it-card {
+    max-width: 280px;
+    padding: 10px 12px;
+  }
+
+  .it-title {
+    font-size: 11px;
+  }
+
+  .it-text {
+    font-size: 10px;
+    min-height: 24px;
+  }
+
+  .it-progress {
+    display: none;
+  }
+}

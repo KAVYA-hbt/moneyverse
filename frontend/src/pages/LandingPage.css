@@ -1,0 +1,574 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');
+
+:root {
+  --navy: #060b16;
+  --navy-deep: #030509;
+  --panel: rgba(255, 255, 255, 0.08);
+  --panel-border: rgba(255, 255, 255, 0.18);
+  --sbi-blue: #005bac;
+  --sbi-blue-bright: #1e8bff;
+  --sbi-glow: rgba(30, 139, 255, 0.55);
+  --gold: #f4b942;
+  --ink: #eaf1fb;
+  --ink-dim: #a9b8d1;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.landing {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink);
+  background: var(--navy-deep);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Background Zoom Animation */
+.landing__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  animation: landing-zoom 24s ease-in-out infinite alternate;
+}
+
+@keyframes landing-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+.landing__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(3, 5, 9, 0.55) 0%,
+      rgba(3, 5, 9, 0.35) 30%,
+      rgba(3, 5, 9, 0.75) 78%,
+      var(--navy-deep) 100%),
+    linear-gradient(90deg,
+      rgba(3, 5, 9, 0.65) 0%,
+      rgba(3, 5, 9, 0.15) 45%,
+      rgba(3, 5, 9, 0.10) 100%);
+}
+
+/* Glowing Route Path Animation */
+.landing__route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.landing__route-path {
+  fill: none;
+  stroke: var(--sbi-blue-bright);
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px var(--sbi-glow)) drop-shadow(0 0 18px var(--sbi-glow));
+  stroke-dasharray: 14 10;
+  opacity: 0.55;
+  animation: landing-route 3.2s linear infinite;
+}
+
+@keyframes landing-route {
+  to { stroke-dashoffset: -240; }
+}
+
+/* Floating Particles Animation */
+.landing__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.landing__particle {
+  position: absolute;
+  left: calc((var(--i) * 5.6%) + 2%);
+  bottom: -10px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--sbi-blue-bright);
+  box-shadow: 0 0 6px 2px var(--sbi-glow);
+  opacity: 0;
+  animation: landing-float 7s ease-in infinite;
+  animation-delay: calc(var(--i) * 0.45s);
+}
+
+@keyframes landing-float {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 0.9; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-92vh); opacity: 0; }
+}
+
+.landing__header {
+  position: relative;
+  z-index: 2;
+  padding: 24px clamp(20px, 4vw, 48px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.landing__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing__logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.6));
+}
+
+.landing__logo-text {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: 0.01em;
+  background: linear-gradient(120deg, #eaf1fb, #c4b5fd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Fullscreen Toggle Button */
+.landing__fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  color: var(--ink);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.landing__fullscreen-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--sbi-blue-bright);
+  color: var(--sbi-blue-bright);
+  transform: scale(1.05);
+  box-shadow: 0 0 12px var(--sbi-glow);
+}
+
+.landing__main {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 clamp(20px, 4vw, 48px) 32px clamp(20px, 4vw, 48px);
+  max-width: 680px;
+  margin-top: -20vh;
+}
+
+.landing__eyebrow {
+  font-family: 'Sora', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sbi-blue-bright);
+  margin-bottom: 14px;
+}
+
+.landing__title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: clamp(24px, 4vw, 46px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+}
+
+.landing__title-accent {
+  background: linear-gradient(120deg, #60a5fa, #a78bfa, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(139, 92, 246, 0.4));
+}
+
+.landing__bottom-right {
+  position: absolute;
+  right: clamp(60px, 8vw, 100px);
+  bottom: clamp(140px, 22vh, 220px);
+  z-index: 2;
+  max-width: 400px;
+}
+
+.landing__story-card {
+  text-align: right;
+  border-radius: 14px;
+  padding: 16px 18px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 24px rgba(88, 28, 235, 0.25), 0 10px 24px rgba(0, 0, 0, 0.35);
+  /* Real gradient border — CSS has no border-color gradient, so this
+     layers two backgrounds: the card's own fill clipped to the padding
+     box, and a gradient clipped to the border box showing only in the
+     1.5px gap between them. */
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(155deg, rgba(20, 12, 46, 0.85) 0%, rgba(10, 6, 26, 0.88) 100%) padding-box,
+    linear-gradient(135deg, #60a5fa, #8b5cf6, #f472b6) border-box;
+}
+
+.landing__subtitle {
+  font-size: clamp(15px, 1.6vw, 19px);
+  line-height: 1.5;
+  color: var(--ink-dim);
+  margin: 0 0 10px;
+}
+
+.landing__story {
+  font-size: clamp(13px, 1.3vw, 15px);
+  font-style: italic;
+  line-height: 1.5;
+  color: #94a3b8;
+  margin: 0;
+  border-right: 2px solid rgba(139, 92, 246, 0.4);
+  padding-right: 12px;
+}
+
+/* Pulsing CTA Button Animation */
+.landing__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 18px 36px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4d9fff 0%, var(--sbi-blue) 55%, var(--sbi-blue-bright) 100%);
+  color: white;
+  font-family: 'Sora', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  position: relative;
+  /* The "chunky beveled" look: a bright inset highlight near the top,
+     a solid darker rim along the bottom (the button's own "thickness"),
+     and an outer drop shadow lifting it off the background. */
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -5px 0 rgba(10, 40, 100, 0.55),
+    0 8px 0 rgba(8, 30, 74, 0.9),
+    0 14px 24px rgba(0, 0, 0, 0.45),
+    0 0 0 0 var(--sbi-glow);
+  animation: cta-pulse 2.6s ease-in-out infinite;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.landing__cta--centered {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(100px, 18vh, 170px);
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.landing__cta.landing__cta--centered:hover {
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.landing__cta.landing__cta--centered:active {
+  transform: translateX(-50%) translateY(4px);
+}
+
+.landing__cta:hover {
+  transform: translateY(-2px);
+}
+
+.landing__cta:active {
+  /* Pressed-in feedback — the button visually "sinks" by losing most of
+     its bottom depth and shifting down to meet it. */
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 0 rgba(10, 40, 100, 0.5),
+    0 2px 0 rgba(8, 30, 74, 0.9),
+    0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.landing__cta svg {
+  transition: transform 0.2s ease;
+}
+
+.landing__cta:hover svg {
+  transform: translateX(3px);
+}
+
+@keyframes cta-pulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -5px 0 rgba(10, 40, 100, 0.55),
+      0 8px 0 rgba(8, 30, 74, 0.9),
+      0 14px 24px rgba(0, 0, 0, 0.45),
+      0 0 0 0 var(--sbi-glow);
+  }
+  50% {
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -5px 0 rgba(10, 40, 100, 0.55),
+      0 8px 0 rgba(8, 30, 74, 0.9),
+      0 14px 24px rgba(0, 0, 0, 0.45),
+      0 0 0 16px rgba(30, 139, 255, 0);
+  }
+}
+
+/* Mobile Landscape & Low Height Adjustments */
+@media (max-height: 550px) {
+  .landing__header {
+    padding: 12px 20px;
+  }
+
+  .landing__logo-mark svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .landing__logo-text {
+    font-size: 15px;
+  }
+
+  .landing__fullscreen-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+  }
+
+  .landing__fullscreen-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .landing__main {
+    padding: 0 20px 16px 20px;
+    justify-content: center;
+  }
+
+  .landing__eyebrow {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+
+  .landing__title {
+    font-size: clamp(22px, 7vh, 36px);
+    margin-bottom: 8px;
+    line-height: 1.1;
+  }
+
+  .landing__subtitle {
+    font-size: 13px;
+    line-height: 1.35;
+    margin-bottom: 14px;
+    max-width: 420px;
+  }
+
+  .landing__cta {
+    padding: 10px 22px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  /* .landing__bottom-right and .landing__cta--centered didn't exist when
+     this breakpoint was first written — their vh-based clamp() offsets
+     hit their floor values at this height and collide with the headline
+     text (confirmed via screenshot at 915x412). Fixed positions here
+     instead of relying on clamp() scaling far enough down. */
+  .landing__milestone-label {
+    display: none;
+  }
+
+  .landing__cta--centered {
+    bottom: 8px;
+    padding: 8px 20px;
+    font-size: 13px;
+  }
+
+  .landing__bottom-right {
+    right: 12px;
+    bottom: 54px;
+    max-width: 260px;
+  }
+
+  .landing__story-card {
+    padding: 8px 10px;
+  }
+
+  .landing__story-card .landing__subtitle {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .landing__story-card .landing__story {
+    font-size: 9px;
+    padding-right: 8px;
+  }
+}
+
+/* Portrait Mobile View */
+@media (max-width: 768px) and (min-height: 551px) {
+  .landing__header {
+    padding: 20px;
+  }
+
+  .landing__main {
+    padding: 0 20px;
+    justify-content: center;
+    max-width: 100%;
+  }
+
+  .landing__title {
+    font-size: clamp(32px, 8vw, 48px);
+  }
+
+  .landing__subtitle {
+    font-size: 15px;
+    max-width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .landing__cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing__bg,
+  .landing__route-path,
+  .landing__particle,
+  .landing__cta {
+    animation: none !important;
+  }
+}
+/* =========================================================================
+   MILESTONE PATH — 5 numbered markers following the existing glowing
+   route, one per game level, popping in with a staggered entrance so the
+   path feels like it's being "climbed" as the page loads.
+   ========================================================================= */
+.landing__milestones {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.landing__milestone {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: milestone-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: var(--delay);
+}
+
+@keyframes milestone-pop {
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.landing__milestone-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.7);
+}
+
+.landing__milestone-label {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: #eaf1fb;
+  background: rgba(10, 6, 26, 0.75);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .landing__milestone-label {
+    display: none;
+  }
+
+  .landing__bottom-right {
+    position: static;
+    text-align: left;
+    max-width: 100%;
+    margin-top: 16px;
+  }
+
+  .landing__main {
+    flex: 0 0 auto;
+  }
+
+  .landing__story {
+    border-right: none;
+    border-left: 2px solid rgba(139, 92, 246, 0.4);
+    padding-right: 0;
+    padding-left: 12px;
+  }
+
+  .landing__milestone-dot {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing__milestone {
+    animation: none !important;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

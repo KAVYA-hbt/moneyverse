@@ -1,0 +1,113 @@
+.ls-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: radial-gradient(ellipse at 50% 30%, #1a1030 0%, #0a0618 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ls-city {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 10%;
+}
+
+.ls-building {
+  width: 60px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.35), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+  animation: ls-rise 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.ls-building--1 { height: 120px; animation-delay: 0.05s; }
+.ls-building--2 { height: 190px; animation-delay: 0.2s; }
+.ls-building--3 { height: 260px; animation-delay: 0.1s; }
+.ls-building--4 { height: 170px; animation-delay: 0.3s; }
+.ls-building--5 { height: 140px; animation-delay: 0.15s; }
+
+@keyframes ls-rise {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.ls-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 15%;
+}
+
+.ls-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 4px solid rgba(139, 92, 246, 0.2);
+  border-top-color: #8b5cf6;
+  animation: ls-spin 0.9s linear infinite;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+@keyframes ls-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ls-label {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: #eaf1fb;
+  letter-spacing: 0.02em;
+}
+
+.ls-tip {
+  margin: 0;
+  max-width: 360px;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-style: italic;
+  color: #94a3b8;
+  min-height: 36px;
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .ls-city {
+    height: 35%;
+    gap: 10px;
+  }
+
+  .ls-building {
+    width: 44px;
+  }
+
+  .ls-spinner {
+    width: 36px;
+    height: 36px;
+    border-width: 3px;
+  }
+
+  .ls-label {
+    font-size: 15px;
+  }
+
+  .ls-tip {
+    font-size: 11px;
+    max-width: 280px;
+  }
+}

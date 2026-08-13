@@ -1,0 +1,111 @@
+.sno-overlay {
+  position: fixed;
+  top: 90px; /* clears .hud-top-left */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 65;
+  width: calc(100% - 48px);
+  max-width: 440px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sno-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  background: linear-gradient(155deg, rgba(12, 24, 46, 0.97) 0%, rgba(6, 14, 28, 0.97) 100%);
+  border: 1px solid rgba(34, 211, 238, 0.5);
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.22), 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+.sno-icon-badge {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.6);
+}
+
+.sno-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sno-line {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.sno-advance-btn {
+  align-self: flex-end;
+  padding: 6px 18px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(120deg, #0ea5e9, #22d3ee);
+  color: #051018;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .sno-overlay {
+    top: 56px;
+    max-width: 360px;
+  }
+
+  .sno-card {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .sno-icon-badge {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .sno-line {
+    font-size: 11px;
+  }
+
+  .sno-advance-btn {
+    padding: 5px 14px;
+    font-size: 10px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+  .sno-overlay {
+    top: 44px;
+    max-width: 300px;
+  }
+
+  .sno-card {
+    padding: 8px 10px;
+  }
+
+  .sno-line {
+    font-size: 10px;
+  }
+}

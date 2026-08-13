@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    container_name: moneyverse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moneyverse
+      POSTGRES_PASSWORD: moneyverse
+      POSTGRES_DB: moneyverse
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - moneyverse_pgdata:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: moneyverse-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@moneyverse.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  moneyverse_pgdata:

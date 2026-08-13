@@ -1,0 +1,479 @@
+.minigame-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  background: rgba(3, 5, 9, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.minigame-card {
+  background: rgba(15, 8, 33, 0.96);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+  color: #eaf1fb;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.minigame-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.minigame-header h3 {
+  font-family: 'Sora', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.minigame-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #eaf1fb;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.minigame-instructions {
+  font-size: 12px;
+  color: #a9b8d1;
+  margin: 0 0 14px;
+}
+
+.minigame-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.minigame-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.minigame-result-icon {
+  font-size: 40px;
+}
+
+.minigame-result-text {
+  font-size: 14px;
+  color: #d8b4fe;
+  margin: 0;
+}
+
+.minigame-result-btn {
+  margin-top: 6px;
+  padding: 10px 26px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ============================= MEMORY MATCH ============================= */
+.mm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.mm-card {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.mm-card.mm-flipped {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+.mm-card.mm-matched {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.4);
+  cursor: default;
+  opacity: 0.7;
+}
+
+.mm-stats {
+  font-size: 11px;
+  color: #a9b8d1;
+}
+
+/* =========================== PATTERN SEQUENCE =========================== */
+.ps-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: 200px;
+}
+
+.ps-tile {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.ps-tile:disabled {
+  cursor: default;
+}
+
+.ps-tile.ps-lit {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 0 18px currentColor;
+}
+
+.ps-status {
+  font-size: 12px;
+  color: #a9b8d1;
+  min-height: 16px;
+}
+
+.ps-lives {
+  font-size: 14px;
+}
+
+/* ============================== QUICK SORT ============================== */
+.qs-target {
+  font-size: 13px;
+  color: #a9b8d1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qs-target-icon {
+  font-size: 28px;
+}
+
+.qs-timer-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.qs-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d3ee, #fbbf24, #ef4444);
+  transition: width 0.1s linear;
+}
+
+.qs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.qs-item {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qs-item:active {
+  transform: scale(0.94);
+}
+
+.qs-lives {
+  font-size: 14px;
+}
+
+/* =============================== HUB PICKER =============================== */
+.mgh-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  background: rgba(3, 5, 9, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mgh-modal {
+  background: rgba(15, 8, 33, 0.96);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  color: #eaf1fb;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.mgh-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #22d3ee;
+  margin: 0 0 4px;
+}
+
+.mgh-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  margin: 0 0 14px;
+}
+
+.mgh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.mgh-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.mgh-option:hover {
+  border-color: rgba(139, 92, 246, 0.6);
+  transform: translateX(2px);
+}
+
+.mgh-option-icon {
+  font-size: 24px;
+}
+
+.mgh-option-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.mgh-option-label {
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.mgh-option-level {
+  font-size: 10px;
+  color: #a9b8d1;
+}
+
+.mgh-close-btn {
+  margin-top: 14px;
+  background: transparent;
+  border: none;
+  color: #a9b8d1;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* =========================================================================
+   MOBILE / LANDSCAPE — matches GamePage.css's breakpoint pattern exactly.
+   On short-height phone screens (the game's primary play orientation),
+   every card here needs to shrink to actually fit on screen at once.
+   ========================================================================= */
+@media (orientation: landscape) and (max-height: 600px) {
+  .minigame-overlay,
+  .mgh-overlay {
+    padding: 10px;
+  }
+
+  .minigame-card,
+  .mgh-modal {
+    padding: 12px;
+    max-width: 300px;
+  }
+
+  .minigame-header h3,
+  .mgh-title {
+    font-size: 13px;
+  }
+
+  .minigame-instructions,
+  .mgh-eyebrow {
+    font-size: 10px;
+    margin-bottom: 8px;
+  }
+
+  .mm-grid {
+    gap: 5px;
+  }
+
+  .mm-card {
+    font-size: 16px;
+  }
+
+  .ps-grid {
+    width: 150px;
+    gap: 6px;
+  }
+
+  .qs-grid {
+    gap: 5px;
+  }
+
+  .qs-item {
+    font-size: 16px;
+  }
+
+  .qs-target-icon {
+    font-size: 20px;
+  }
+
+  .mgh-option {
+    padding: 7px 10px;
+    gap: 8px;
+  }
+
+  .mgh-option-icon {
+    font-size: 18px;
+  }
+
+  .minigame-result-icon {
+    font-size: 28px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+  .minigame-card,
+  .mgh-modal {
+    max-width: 260px;
+    padding: 10px;
+  }
+
+  .minigame-header h3,
+  .mgh-title {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .minigame-instructions,
+  .mgh-eyebrow {
+    display: none; /* not enough vertical room — the game itself is self-explanatory */
+  }
+
+  .mm-grid {
+    gap: 4px;
+  }
+
+  .mm-card {
+    font-size: 14px;
+  }
+
+  .mm-stats {
+    font-size: 9px;
+  }
+
+  .ps-grid {
+    width: 120px;
+    gap: 5px;
+  }
+
+  .ps-status,
+  .ps-lives,
+  .qs-lives {
+    font-size: 10px;
+  }
+
+  .qs-target {
+    font-size: 10px;
+  }
+
+  .qs-target-icon {
+    font-size: 16px;
+  }
+
+  .qs-grid {
+    gap: 4px;
+  }
+
+  .qs-item {
+    font-size: 14px;
+  }
+
+  .mgh-option {
+    padding: 6px 8px;
+  }
+
+  .mgh-option-label {
+    font-size: 11px;
+  }
+
+  .mgh-option-level {
+    font-size: 8px;
+  }
+}
+
+/* Touch devices — ensure every tappable target stays comfortably
+   thumb-sized even after the landscape shrink above. */
+@media (hover: none), (pointer: coarse) {
+  .mm-card,
+  .qs-item {
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .ps-tile {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mgh-option {
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,206 @@
+.cdm-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+  padding: 56px 100px 20px 100px; /* left AND right padding clear the two overlapping portraits */
+  background: linear-gradient(180deg, rgba(10, 6, 26, 0) 0%, rgba(10, 6, 26, 0.97) 22%, rgba(6, 4, 18, 0.99) 100%);
+}
+
+.cdm-portrait-col {
+  position: absolute;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.cdm-portrait-col--speaker {
+  left: 20px;
+}
+
+.cdm-portrait-col--player {
+  right: 20px;
+}
+
+.cdm-portrait {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  background: linear-gradient(145deg, #3b82f6, #8b5cf6);
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 22px rgba(139, 92, 246, 0.7), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.cdm-portrait--npc {
+  background: linear-gradient(145deg, #0ea5e9, #22d3ee);
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.6), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.cdm-portrait--mayor {
+  background: linear-gradient(145deg, #f59e0b, #f4b942);
+  box-shadow: 0 0 22px rgba(244, 185, 66, 0.6), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.cdm-portrait--player {
+  background: linear-gradient(145deg, #22c55e, #16a34a);
+  box-shadow: 0 0 22px rgba(34, 197, 94, 0.6), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.cdm-name-tag {
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(120deg, #3b82f6, #8b5cf6);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+}
+
+.cdm-name-tag--npc {
+  background: linear-gradient(120deg, #0ea5e9, #22d3ee);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+
+.cdm-name-tag--mayor {
+  background: linear-gradient(120deg, #f59e0b, #f4b942);
+  box-shadow: 0 0 10px rgba(244, 185, 66, 0.5);
+}
+
+.cdm-name-tag--player {
+  background: linear-gradient(120deg, #22c55e, #16a34a);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+}
+
+.cdm-text-col {
+  flex: 1;
+  min-width: 0;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.cdm-line {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #eaf1fb;
+  max-width: 640px;
+}
+
+.cdm-continue-btn {
+  align-self: flex-end;
+  padding: 10px 28px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.5);
+}
+
+.cdm-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+
+.cdm-option-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: #eaf1fb;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cdm-option-btn:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+  background: rgba(139, 92, 246, 0.14);
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .cdm-bar {
+    padding: 40px 84px 12px 84px;
+  }
+
+  .cdm-portrait-col--speaker {
+    left: 12px;
+  }
+
+  .cdm-portrait-col--player {
+    right: 12px;
+  }
+
+  .cdm-portrait-col {
+    bottom: 8px;
+  }
+
+  .cdm-portrait {
+    width: 56px;
+    height: 56px;
+    font-size: 26px;
+  }
+
+  .cdm-name-tag {
+    font-size: 10px;
+    padding: 3px 12px;
+  }
+
+  .cdm-line {
+    font-size: 13px;
+  }
+
+  .cdm-continue-btn {
+    padding: 7px 20px;
+    font-size: 12px;
+  }
+
+  .cdm-option-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 420px) {
+  .cdm-bar {
+    padding: 32px 66px 8px 66px;
+  }
+
+  .cdm-portrait {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
+
+  .cdm-name-tag {
+    font-size: 9px;
+    padding: 2px 10px;
+  }
+
+  .cdm-line {
+    font-size: 11px;
+  }
+}

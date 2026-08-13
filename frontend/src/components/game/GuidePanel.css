@@ -1,0 +1,128 @@
+.gp-panel {
+  background: rgba(15, 8, 33, 0.97);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 14px;
+  overflow: hidden;
+  width: 280px;
+  box-shadow: 0 0 24px rgba(88, 28, 235, 0.25), 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+.gp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gp-header-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a9b8d1;
+}
+
+.gp-close-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #eaf1fb;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.gp-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.gp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gp-section-title {
+  margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: #eaf1fb;
+}
+
+.gp-section-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.gp-key-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gp-key-list li {
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gp-key-list kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #eaf1fb;
+}
+
+/* Anchors the popover just under the top bar, roughly where the ❓
+   button sits — a fixed approximate offset rather than a JS-measured
+   position, since the top bar's layout is stable enough for this to line
+   up closely in practice. */
+.guide-anchor-wrapper {
+  position: fixed;
+  top: 62px;
+  left: 200px;
+  z-index: 70;
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .guide-anchor-wrapper {
+    top: 46px;
+    left: 140px;
+  }
+
+  .gp-panel {
+    width: 220px;
+  }
+
+  .gp-body {
+    max-height: 180px;
+    padding: 8px 10px 10px;
+  }
+
+  .gp-section-title {
+    font-size: 10px;
+  }
+
+  .gp-section-text,
+  .gp-key-list li {
+    font-size: 9px;
+  }
+}
