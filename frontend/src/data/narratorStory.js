@@ -21,11 +21,16 @@ export const NARRATOR_BEATS = {
   // REPEATABLE — movement-aware nudges while the companion is still
   // locked. Narrator voice, since the companion can't comment on its own
   // unlocking before it's awake.
+  // lines as a function receives { avatarName } context so the resume
+  // nudge can call the player by their chosen avatar name instead of a
+  // generic line — falls back to "you" if no name was passed in, so a
+  // call site that forgets the context still renders something real
+  // rather than tripping the empty-content guard above.
   companion_not_approaching: {
-    lines: ["Your companion's still out there."],
+    lines: (ctx) => [`${ctx?.avatarName || 'You'}, your companion's still out there.`],
   },
   companion_getting_close: {
-    lines: ["Getting close now."],
+    lines: (ctx) => [`Getting close now, ${ctx?.avatarName || 'friend'}.`],
   },
 
   level_1_start: {

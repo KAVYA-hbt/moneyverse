@@ -414,6 +414,15 @@ def log_telemetry_batch(payload: schemas.TelemetryBatchRequest, db: Session = De
                 suspicious_latency=None if p.get("suspicious_latency") is None else int(p["suspicious_latency"]),
             ))
             written += 1
+        elif event.type == "savings_habit_selfreport":
+            p = event.payload
+            db.add(models.SavingsHabitSelfReport(
+                player_id=player.id,
+                source_npc_id=p.get("source_npc_id"),
+                saves_money=None if p.get("saves_money") is None else int(p["saves_money"]),
+                savings_method=p.get("savings_method"),
+            ))
+            written += 1
         # else: unrecognized event type — silently skipped, see docstring.
 
     db.commit()

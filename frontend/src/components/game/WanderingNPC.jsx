@@ -28,10 +28,24 @@ function collidesWithBoxes(x, z, items, radius) {
   if (!items) return false
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
-    const bx = item.render_x ?? item.position_x ?? item.x ?? 0
-    const bz = item.render_z ?? item.position_z ?? item.z ?? 0
+
+    // render_x/render_z is a CORNER, not a center — the same bug already
+    // fixed for the capstone map icon and the fixed-story-NPC spawn
+    // placement (see GamePage.jsx). This collision check was still using
+    // it as a center, which shifts every building's hitbox by half its
+    // own width/depth — that offset is exactly why wandering NPCs were
+    // seen walking into/through walls despite this collision code
+    // existing: half the building was correctly guarded, the other half
+    // wasn't guarded at all. Vehicle/parking items use position_x/x,
+    // which IS already center-based, so only the render_x/render_z path
+    // needs the corner-to-center correction.
+    const usesCornerCoords = item.render_x !== undefined || item.render_z !== undefined
+    const rawX = item.render_x ?? item.position_x ?? item.x ?? 0
+    const rawZ = item.render_z ?? item.position_z ?? item.z ?? 0
     const width = item.scaled_width || item.width || 3
     const depth = item.scaled_depth || item.depth || 3
+    const bx = usesCornerCoords ? rawX + width / 2 : rawX
+    const bz = usesCornerCoords ? rawZ + depth / 2 : rawZ
 
     // Use centered bounding box or offset based on layout format
     const minX = bx - width / 2 - radius

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { getUserProfile } from '../utils/gameStorage'
+import { completeQuestOnServer } from '../services/backendSync.js'
 import {
   QUEST_LABELS,
   QUEST_REWARDS,
@@ -217,7 +218,22 @@ export function useQuestState(layout, onboardingProfile) {
     const reward = QUEST_REWARDS[questId] || DEFAULT_REWARD
     setCoins((prev) => prev + reward)
     setLastReward({ questId, amount: reward })
-  }, [completed])
+
+    // Previously only ONE of six call sites across GamePage.jsx (the
+    // capstone path) remembered to also sync to the backend — every
+    // other completion (NPC advisory, recognition, treasure-linked chain
+    // slots) only ever updated this local state, so a page refresh
+    // silently reverted them via hydrateFromServer() pulling the
+    // server's stale, capstone-only record. Moving the sync in HERE
+    // means every caller gets it automatically, with no way to add a
+    // 7th call site later that forgets it again. Fire-and-forget by
+    // design — completeQuestOnServer already swallows its own failures
+    // (see backendSync.js's safeFetch), so this never blocks or reverts
+    // the local state update above even if the network call fails.
+    if (onboardingProfile?.email) {
+      completeQuestOnServer(onboardingProfile.email, questId, reward)
+    }
+  }, [completed, onboardingProfile?.email])
 
   const clearLastReward = useCallback(() => setLastReward(null), [])
 

@@ -21,7 +21,15 @@ const SPEAKER_ICONS = {
  * between them.
  */
 export default function CompanionDialogueModal({ narrative, companionName, playerName }) {
-  if (!narrative.isActive) return null
+  // Second layer of defense, in addition to the guard already in
+  // useCompanionNarrative's play() — if isActive is somehow true with
+  // no real line to show (e.g. an older cached build, or a future call
+  // site that bypasses play()), refuse to render a bar with nothing in
+  // it. This is exactly the "empty box with just an Okay button" bug —
+  // closing here instead of showing it is strictly better than leaving
+  // the player staring at a dead button with no text and no way to
+  // understand what happened.
+  if (!narrative.isActive || !narrative.currentLine || !narrative.currentLine.trim()) return null
 
   const speakerLabel =
     narrative.speaker === 'companion' ? (companionName || 'Companion') : SPEAKER_LABELS[narrative.speaker]

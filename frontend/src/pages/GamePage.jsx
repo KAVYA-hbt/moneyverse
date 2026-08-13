@@ -24,9 +24,13 @@ import { ObjectiveArrows } from '../components/game/ObjectiveArrows.jsx'
 import { generateQuizFromBackend } from '../services/quizService.js'
 import { syncDailyStreak, addStreakFreezer } from '../utils/streakStorage.js'
 import { getBondMeter, incrementBondMeter, BOND_REWARDS } from '../utils/bondStorage.js'
+import { getLevelTaskProgress, saveLevelTaskProgress } from '../utils/levelTaskStorage.js'
+import { useAdvisoryConversation } from '../hooks/useAdvisoryConversation.js'
+import AdvisoryConversationModal from '../components/game/AdvisoryConversationModal.jsx'
 import { QUEST_META } from '../data/questCatalog.js'
 import { pickAdvisoryTopicForLevel, LEVEL_CAPSTONE_QUESTS } from '../data/levelTasks.js'
-import { syncPlayer, completeQuestOnServer, collectTreasureOnServer } from '../services/backendSync.js'
+import { syncPlayer, collectTreasureOnServer } from '../services/backendSync.js'
+import { emitTelemetry } from '../telemetry/telemetryBus.js'
 import { getApiBaseUrl } from '../utils/apiBase.js'
 import { MobileControls } from '../components/game/MobileControls.jsx'
 import CompanionWorldModel from '../components/game/CompanionWorldModel.jsx'
@@ -57,6 +61,7 @@ const ROBOT_COMPANION = {
 }
 import WanderingNPC from '../components/game/WanderingNPC.jsx'
 import FixedStoryNPC from '../components/game/FixedStoryNPC.jsx'
+import ModelErrorBoundary from '../components/game/ModelErrorBoundary.jsx'
 import { AVATARS } from './UserDetailsPage.jsx'
 import { useGameAudio } from '../hooks/useGameAudio.js'
 
@@ -257,6 +262,7 @@ export default function GamePage() {
   const [companionNameInput, setCompanionNameInput] = useState('')
   const [miniGameHubOpen, setMiniGameHubOpen] = useState(false)
   const narrative = useCompanionNarrative()
+  const advisoryConversation = useAdvisoryConversation()
   // Stage 2 fires ONCE, on the player's very first quest — an onboarding
   // moment, not something that should repeat on quest #2 through #25.
   const hasShownFirstQuestApproachRef = useRef(false)
@@ -340,6 +346,18 @@ export default function GamePage() {
 
   // This will prevent audio from playing while the server syncs
   const isGameReadyRef = useRef(false)
+
+  // Guards against a stale async response applying itself after the
+  // player has navigated away or the component has otherwise unmounted —
+  // see handleNpcAdvisory below, the one confirmed real trigger for this
+  // (its backend round-trip can outlive a quick re-approach/refresh).
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   // Served from frontend/public/audio/ — plain URL strings instead of
   // build-time imports, so a missing/renamed file just plays silence with
@@ -460,16 +478,34 @@ export default function GamePage() {
   const getTaskChainId = useCallback((slotIndex) => levelChainSlice[slotIndex], [levelChainSlice])
   const NPC_HELP_QUOTA = currentLevel === 1 ? 1 : 3
 
-  // Resets task progress whenever the level actually changes — each
-  // level's 5 slots start fresh, since the underlying chain slice they
-  // map to is different too.
-  const previousTaskLevelRef = useRef(currentLevel)
+  // Hydrates task progress for whatever the current level actually is —
+  // for a level never visited before, storage naturally has nothing
+  // saved and this correctly returns all-zero (the old "reset on level
+  // change" behavior). For the SAME level after a refresh, this
+  // correctly restores whatever was saved instead of the previous
+  // hardcoded-zero useState default, which had no persistence at all —
+  // any progress on npcHelpCount/recognitionDone/minigameDone/
+  // capstoneDone was silently lost on every reload, not just mini-game.
   useEffect(() => {
-    if (previousTaskLevelRef.current !== currentLevel) {
-      previousTaskLevelRef.current = currentLevel
-      setLevelTaskProgress({ npcHelpCount: 0, recognitionDone: false, minigameDone: false, capstoneDone: false })
+    setLevelTaskProgress(getLevelTaskProgress(sanitizedUser, currentLevel))
+  }, [currentLevel, sanitizedUser])
+
+  // Single choke point that persists levelTaskProgress on every change,
+  // regardless of which of the several call sites updated it — avoids
+  // repeating the exact mistake that caused the completeQuest bug
+  // (remembering to add a save call at every scattered mutation site).
+  const hasHydratedTaskProgressRef = useRef(false)
+  useEffect(() => {
+    // Skip the very first run — that's this effect firing right after
+    // the hydrate-effect above just SET this same state from storage,
+    // so persisting it again immediately would be a redundant no-op
+    // write, not a real update to save.
+    if (!hasHydratedTaskProgressRef.current) {
+      hasHydratedTaskProgressRef.current = true
+      return
     }
-  }, [currentLevel])
+    saveLevelTaskProgress(sanitizedUser, currentLevel, levelTaskProgress)
+  }, [levelTaskProgress, sanitizedUser, currentLevel])
 
   // The old chain/building system still detects proximity to EVERY
   // unlocked incomplete quest in the chain (see InteractionSystem.jsx) —
@@ -568,7 +604,7 @@ export default function GamePage() {
         if (!targetId) return
 
         if (g.companionPhase !== 'done') {
-          storyNarrator.playRepeatable('companion_not_approaching')
+          storyNarrator.playRepeatable('companion_not_approaching', { avatarName: selectedAvatar?.name })
         } else {
           narrative.play('quest_not_approaching', {
             questLabel: g.questState.questLabels[g.activeQuestIdInChain] ?? g.activeQuestIdInChain,
@@ -581,13 +617,20 @@ export default function GamePage() {
         if (!tourStarted) {
           storyNarrator.playOnce('intro')
           storyNarrator.playOnce('level_1_start')
-          // Returning player — the once-ever lines above are no-ops for
-          // them, so without this they'd load in to dead silence with no
-          // active guidance at all (the movement-aware check alone needs
-          // ~30s of standing still before its first line fires). This
-          // closes that gap immediately instead.
-          setTimeout(fireResumeNudge, 1500)
         }
+      }
+
+      // Read-only check against the SAME key useIntroTour checks
+      // internally — deliberately NOT calling introTour.start() here,
+      // since that has a real side effect (immediately activates the
+      // tour) for a first-timer, which would break the 5200ms
+      // scene-settling pacing their tour is supposed to get. This check
+      // has no side effects either way, so it's safe to run immediately.
+      let isReturningPlayer = false
+      try {
+        isReturningPlayer = localStorage.getItem(`sbi_questcraft_introtour_done_${sanitizedUser}`) === 'true'
+      } catch {
+        isReturningPlayer = false
       }
 
       if (!serverState) {
@@ -604,7 +647,21 @@ export default function GamePage() {
       setTimeout(() => {
         isGameReadyRef.current = true
       }, 500)
-      setTimeout(beginOnboarding, 5200)
+
+      if (isReturningPlayer) {
+        // Skips the 5200ms new-player pacing entirely — that delay exists
+        // so a first-timer's tour/story doesn't pop up before the world
+        // has visually settled, which doesn't apply here (introTour.start()
+        // is a no-op for them; beginOnboarding's playOnce() calls are also
+        // no-ops, both confirmed by isReturningPlayer above). 800ms is
+        // just enough for the scene to have something rendered.
+        setTimeout(() => {
+          beginOnboarding() // no-op path, kept for consistency/future-proofing
+          fireResumeNudge()
+        }, 800)
+      } else {
+        setTimeout(beginOnboarding, 5200)
+      }
     })
   }, [profile?.email])
 
@@ -825,17 +882,70 @@ export default function GamePage() {
   const FIXED_STORY_NPCS = useMemo(() => ([
     { id: 'arjun', name: 'Arjun', portrait: npcPortrait1, greetingBeat: 'npc_greeting_arjun', bodyUrl: AVATARS[0]?.url, fraction: 0.2 },
     { id: 'riya', name: 'Riya', portrait: npcPortrait2, greetingBeat: 'npc_greeting_riya', bodyUrl: AVATARS[1]?.url, fraction: 0.5 },
-    { id: 'new-face', name: 'A New Face', portrait: npcPortrait3, greetingBeat: 'npc_greeting_newface', bodyUrl: AVATARS[2]?.url, fraction: 0.8 },
+    { id: 'meera', name: 'Meera', portrait: npcPortrait3, greetingBeat: 'npc_greeting_meera', bodyUrl: AVATARS[2]?.url, fraction: 0.8 },
   ]), [])
+
+  // Extra margin beyond a building's own footprint to keep an NPC's body
+  // clear of its wall — the footprint itself comes from each building's
+  // actual scaled_width/scaled_depth below, not a flat guess.
+  const BUILDING_CLEARANCE_MARGIN = 2.5
 
   const fixedStoryNpcPositions = useMemo(() => {
     if (!layout?.roads || layout.roads.length === 0) return {}
     const totalRoads = layout.roads.length
+    const buildings = layout.buildings || []
+
+    // render_x/render_z is each building's CORNER, not its center — see
+    // the identical fix already applied to the capstone icon a few
+    // hundred lines down ("using the raw corner coordinate was
+    // offsetting the icon toward the building's edge instead of its
+    // middle"). The NPC-placement clearance check had the same bug: it
+    // measured distance from the corner with a flat 7-unit radius,
+    // which is both the wrong reference point AND ignores that large
+    // buildings (large-building.glb) have a much bigger real footprint
+    // than smaller ones — this is why NPCs kept spawning inside/behind
+    // walls even after the outward-search logic below was added.
+    const isClearOfBuildings = (x, z) =>
+      buildings.every((b) => {
+        const width = b.scaled_width || 10
+        const depth = b.scaled_depth || 10
+        const centerX = (b.render_x ?? 0) + width / 2
+        const centerZ = (b.render_z ?? 0) + depth / 2
+        const requiredClearance = Math.max(width, depth) / 2 + BUILDING_CLEARANCE_MARGIN
+        return Math.hypot(centerX - x, centerZ - z) >= requiredClearance
+      })
+
     const positions = {}
     FIXED_STORY_NPCS.forEach((npc) => {
-      const roadIndex = Math.floor(npc.fraction * totalRoads) % totalRoads
-      const road = layout.roads[roadIndex]
-      positions[npc.id] = [road.render_x ?? 0, ROAD_SURFACE_HEIGHT, road.render_z ?? 0]
+      const startIndex = Math.floor(npc.fraction * totalRoads) % totalRoads
+
+      // The fraction-picked road tile is a starting GUESS, not a
+      // guarantee — some road tiles sit close enough to a building's
+      // footprint to visually spawn an NPC inside/behind a wall (the
+      // originally reported bug). Search outward from that starting
+      // point for the nearest road tile that actually has clearance,
+      // rather than trusting the first pick blindly.
+      let chosen = null
+      for (let offset = 0; offset < totalRoads && !chosen; offset++) {
+        const candidateIndex = (startIndex + offset) % totalRoads
+        const candidate = layout.roads[candidateIndex]
+        const x = candidate.render_x ?? 0
+        const z = candidate.render_z ?? 0
+        if (isClearOfBuildings(x, z)) {
+          chosen = { x, z }
+        }
+      }
+
+      // Fallback: every road tile failed the clearance check (a very
+      // dense layout) — better to place the NPC somewhere than nowhere,
+      // even if it's imperfect; the original pick is still the most
+      // reasonable single fallback available.
+      if (!chosen) {
+        const road = layout.roads[startIndex]
+        chosen = { x: road.render_x ?? 0, z: road.render_z ?? 0 }
+      }
+
+      positions[npc.id] = [chosen.x, ROAD_SURFACE_HEIGHT, chosen.z]
     })
     return positions
   }, [layout, FIXED_STORY_NPCS])
@@ -1186,6 +1296,13 @@ export default function GamePage() {
       performanceState: { current_difficulty: questState.levelInfo.difficulty, last_question_attempts: 1 },
     })
 
+    // The player may have navigated away, refreshed, or re-triggered this
+    // same advisory while this request was in flight — applying a stale
+    // response at this point would either update state nobody's looking
+    // at, or (the originally reported bug) open a dialogue beat that no
+    // longer matches what's actually happening on screen.
+    if (!isMountedRef.current) return
+
     const normalized = normalizeQuizPayload(agentResponse, 8)
     const finalQuiz = normalized || { ...fallbackQuiz, reward: 8, isFallback: true }
     setQuizLoading(false)
@@ -1258,14 +1375,80 @@ export default function GamePage() {
   }, [nearbyNpc, bondMeter, activeQuiz, quizLoading, handleNpcAdvisory, currentLevel, getTaskChainId, questState])
 
   // Phase 3A — a fixed story NPC's greeting (clickable-only: Help / Not
-  // right now), leading into the same advisory quiz pipeline as any
-  // other encounter once the player chooses to help.
+  // right now), leading into the new WhatsApp-style advisory
+  // conversation (see useAdvisoryConversation.js + advisoryScripts.js) —
+  // NOT the old LLM-quiz pipeline, which is still used for anonymous
+  // wandering-NPC encounters (see handleNpcAdvisory above) since those
+  // have no written script to run.
   const handleFixedNpcInteract = useCallback(() => {
-    if (!nearbyFixedNpc || narrative.isActive || activeQuiz || quizLoading) return
+    if (!nearbyFixedNpc || narrative.isActive || activeQuiz || quizLoading || advisoryConversation.isActive) return
     narrative.play(nearbyFixedNpc.greetingBeat, {}, (choice) => {
-      if (choice === 'help') handleNpcAdvisory(nearbyFixedNpc)
+      if (choice === 'help') advisoryConversation.start(nearbyFixedNpc.id)
     })
-  }, [nearbyFixedNpc, narrative, activeQuiz, quizLoading, handleNpcAdvisory])
+  }, [nearbyFixedNpc, narrative, activeQuiz, quizLoading, advisoryConversation])
+
+  // Applies the same reward weight as any other quest-equivalent NPC
+  // help (completeAdvisorySuccess's old logic) once the player reaches
+  // a genuine resolution — NOT the short "spend now"/decline close,
+  // which has no written payoff arc and isn't reward-worthy the same way.
+  const hasRewardedAdvisoryRef = useRef(false)
+  useEffect(() => {
+    if (advisoryConversation.phase !== 'done' || !advisoryConversation.reachedFullResolution) {
+      hasRewardedAdvisoryRef.current = false
+      return
+    }
+    if (hasRewardedAdvisoryRef.current) return
+    hasRewardedAdvisoryRef.current = true
+
+    addBond(BOND_REWARDS.quest)
+    playSuccessSound()
+    setLevelTaskProgress((prev) => {
+      if (prev.npcHelpCount >= NPC_HELP_QUOTA) return prev
+      const slotIndex = currentLevel === 1 ? 1 : prev.npcHelpCount
+      const chainId = getTaskChainId(slotIndex)
+      if (chainId) questState.completeQuest(chainId)
+      return { ...prev, npcHelpCount: prev.npcHelpCount + 1 }
+    })
+    setSystemNotice(`🤝 Helped ${advisoryConversation.npcName}!`)
+
+    // The full badge/share screen from the spec doesn't exist yet (see
+    // the standing to-do list). Once the NPC chat itself closes, the
+    // ROBOT COMPANION — not the NPC — asks a short, honest self-report
+    // question: does the player save money themselves? This is
+    // deliberately NOT a product pitch (no FD counter, no loan office
+    // mentioned here) — it's a signal-gathering step for the psychometric
+    // layer, feeding the SAME telemetry pipeline QuestQuizModal already
+    // writes to. The real product recommendation moment stays exactly
+    // where it already was: product_funnel_checkin, gated on the player
+    // having actually played enough levels for a recommendation to mean
+    // anything (see fireProductFunnelCheckin above).
+    setTimeout(() => {
+      narrative.play('savings_habit_checkin', {}, (savesValue) => {
+        emitTelemetry(profile?.email, {
+          type: 'savings_habit_selfreport',
+          payload: {
+            source_npc_id: advisoryConversation.npcId,
+            saves_money: savesValue === 'yes',
+          },
+        })
+        if (savesValue === 'yes') {
+          narrative.play('savings_habit_method', {}, (methodValue) => {
+            emitTelemetry(profile?.email, {
+              type: 'savings_habit_selfreport',
+              payload: {
+                source_npc_id: advisoryConversation.npcId,
+                saves_money: true,
+                savings_method: methodValue, // 'bank' | 'home'
+              },
+            })
+            narrative.play('savings_habit_close_yes')
+          })
+        } else {
+          narrative.play('savings_habit_close_no')
+        }
+      })
+    }, 600)
+  }, [advisoryConversation.phase, advisoryConversation.reachedFullResolution, advisoryConversation.npcName, advisoryConversation.npcId, addBond, playSuccessSound, currentLevel, getTaskChainId, questState, NPC_HELP_QUOTA, narrative, profile?.email])
 
   const handleUseHint = useCallback(async (questionText) => {
     if (hintScrolls <= 0) return null
@@ -1432,7 +1615,7 @@ export default function GamePage() {
         if (currentDistance < NEAR_DISTANCE && hasShownGettingCloseForTargetRef.current !== targetId) {
           hasShownGettingCloseForTargetRef.current = targetId
           if (companionPhase !== 'done') {
-            storyNarrator.playRepeatable('companion_getting_close')
+            storyNarrator.playRepeatable('companion_getting_close', { avatarName: selectedAvatar?.name })
           } else {
             narrative.play('quest_getting_close', {
               questLabel: questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain,
@@ -1445,7 +1628,7 @@ export default function GamePage() {
         if (notApproachingStreakRef.current >= NOT_APPROACHING_THRESHOLD) {
           notApproachingStreakRef.current = 0 // re-arm for another ~30s of no progress, not immediate repeat
           if (companionPhase !== 'done') {
-            storyNarrator.playRepeatable('companion_not_approaching')
+            storyNarrator.playRepeatable('companion_not_approaching', { avatarName: selectedAvatar?.name })
           } else {
             narrative.play('quest_not_approaching', {
               questLabel: questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain,
@@ -1584,7 +1767,7 @@ export default function GamePage() {
   const npcCharacters = [
     { name: 'Arjun', image: npcPortrait1, flow: "Hey — I need help. Salary just came in and I don't know what to do with it before it's gone.", hand: 'nb-hand-1' },
     { name: 'Riya', image: npcPortrait2, flow: "Can you help me out? I got some gift money and I keep going back and forth on what to do with it.", hand: 'nb-hand-2' },
-    { name: 'A New Face', image: npcPortrait3, flow: "I could use a hand with something — still figuring out how things work around here.", hand: 'nb-hand-3' },
+    { name: 'Meera', image: npcPortrait3, flow: "This month's actually been great — way more orders than usual. But there's a call to make.", hand: 'nb-hand-3' },
   ]
   if (currentLevel === 1) {
     noticeBoardItems.push({
@@ -1811,7 +1994,7 @@ export default function GamePage() {
         </g>
       )}
 
-      {/* Fixed story NPCs (Arjun, Riya, A New Face) — always shown, since
+      {/* Fixed story NPCs (Arjun, Riya, Meera) — always shown, since
           unlike the companion/capstone these aren't "done" once talked
           to (helping them isn't gated the same way; they stay around). */}
       {FIXED_STORY_NPCS.map((npc) => {
@@ -2018,6 +2201,12 @@ export default function GamePage() {
         playerName={profile.name}
       />
 
+      <AdvisoryConversationModal
+        conversation={advisoryConversation}
+        npcPortrait={FIXED_STORY_NPCS.find((n) => n.id === advisoryConversation.npcId)?.portrait}
+        playerPortrait={selectedAvatar?.url}
+      />
+
       <StoryNarratorOverlay narrator={storyNarrator} />
 
       <IntroTourOverlay tour={introTour} />
@@ -2222,7 +2411,11 @@ export default function GamePage() {
               if (!pos || !npc.bodyUrl) return null
               return (
                 <group key={npc.id}>
-                  <FixedStoryNPC avatarUrl={npc.bodyUrl} position={pos} facingY={i * 2.1} />
+                  <ModelErrorBoundary label={`FixedStoryNPC: ${npc.name}`}>
+                    <Suspense fallback={null}>
+                      <FixedStoryNPC avatarUrl={npc.bodyUrl} position={pos} facingY={i * 2.1} />
+                    </Suspense>
+                  </ModelErrorBoundary>
                   <FloatingGenieIcon
                     position={[pos[0], 2, pos[2]]}
                     playerPosition={playerPos}
@@ -2510,9 +2703,10 @@ export default function GamePage() {
                 addBond(BOND_REWARDS.treasure)
               } else if (activeQuestId) {
                 // completeQuest already credits the correct coin reward for
-                // this quest via QUEST_REWARDS — don't add it again here.
+                // this quest via QUEST_REWARDS, AND now syncs to the server
+                // itself (see useQuestState.js) — no separate call needed
+                // here anymore; it used to be duplicated in both places.
                 questState.completeQuest(activeQuestId)
-                completeQuestOnServer(profile.email, activeQuestId, questState.lastReward?.amount ?? 20)
                 playSuccessSound()
                 addBond(BOND_REWARDS.quest)
 

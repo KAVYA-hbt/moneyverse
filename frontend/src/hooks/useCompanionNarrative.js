@@ -45,6 +45,20 @@ export function useCompanionNarrative() {
       console.warn(`[useCompanionNarrative] Unknown beat: "${beatOrId}"`)
       return
     }
+
+    // Guards against opening an empty dialogue box — a stale/failed async
+    // response (e.g. an NPC-advisory backend call racing a navigation or
+    // a refresh) could otherwise hand play() a beat whose `lines` resolve
+    // to an empty array or a blank first string, and the modal would pop
+    // open showing nothing at all with no way to dismiss it cleanly.
+    const firstLine = typeof resolvedBeat.lines === 'function'
+      ? resolvedBeat.lines(ctx)?.[0]
+      : resolvedBeat.lines?.[0]
+    if (!firstLine || (typeof firstLine === 'string' && firstLine.trim() === '')) {
+      console.warn(`[useCompanionNarrative] Refused to open an empty beat:`, beatOrId)
+      return
+    }
+
     playCalledDuringCallbackRef.current = true
     setActiveBeat(resolvedBeat)
     setContext(ctx)

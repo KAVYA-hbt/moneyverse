@@ -125,3 +125,22 @@ class QuizAttempt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     player = relationship("Player")
+
+class SavingsHabitSelfReport(Base):
+    """A player's own short self-report on whether/how they save money,
+    captured by the robot companion right after an NPC advisory chat —
+    NOT part of a product pitch (see companionDialogue.js's
+    savings_habit_checkin beat and its docstring). Feeds the psychometric
+    signal layer alongside quiz_attempts; kept as its own table rather
+    than overloading QuizAttempt, since this isn't a graded question —
+    there's no correct_index/is_correct concept here at all."""
+    __tablename__ = "savings_habit_selfreports"
+
+    id = Column(Integer, primary_key=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    source_npc_id = Column(String, nullable=True)   # which advisory NPC preceded this check-in
+    saves_money = Column(Integer, nullable=True)     # 1/0 — the Yes/No answer
+    savings_method = Column(String, nullable=True)   # 'bank' | 'home' | NULL (only asked if saves_money=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    player = relationship("Player")

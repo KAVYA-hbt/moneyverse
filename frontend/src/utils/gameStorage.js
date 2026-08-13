@@ -15,6 +15,13 @@ export function getUserProfile() {
       district: latest.district || '',
       // Avatar Selection
       selectedAvatar: latest.selectedAvatar || null,
+      // Companion — saveUserProfile() writes these on unlock/naming, but
+      // this whitelist previously never read them back out, silently
+      // dropping the saved companion state on every reload and forcing
+      // the unlock flow to run again even though the data was sitting
+      // right there in localStorage the whole time.
+      companionId: latest.companionId || null,
+      companionName: latest.companionName || null,
       createdAt: latest.createdAt || new Date().toISOString(),
     }
   }
@@ -30,6 +37,8 @@ export function getUserProfile() {
     state: '',
     district: '',
     selectedAvatar: null,
+    companionId: null,
+    companionName: null,
     createdAt: new Date().toISOString(),
   }
 }

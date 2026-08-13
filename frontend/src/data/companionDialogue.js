@@ -112,12 +112,12 @@ export const DIALOGUE_BEATS = {
       { label: '👋 Not right now', value: 'decline' },
     ],
   },
-  npc_greeting_newface: {
+  npc_greeting_meera: {
     speaker: 'npc',
     animation: null,
-    lines: ["I could use a hand with something — still figuring out how things work around here."],
+    lines: ["This month's actually been great — way more orders than usual. Could use another pair of eyes on something, though."],
     options: [
-      { label: '🤝 Help them', value: 'help' },
+      { label: '🤝 Help Meera', value: 'help' },
       { label: '👋 Not right now', value: 'decline' },
     ],
   },
@@ -224,5 +224,41 @@ export const DIALOGUE_BEATS = {
     speaker: 'companion',
     animation: 'no',
     lines: ["Totally fine. I'll drop it — for now."],
+  },
+
+  // Fires once, right after an NPC advisory chat closes (see
+  // fireSavingsHabitCheckin in GamePage.jsx) — a short, honest
+  // self-report, NOT a product pitch. Deliberately separate from
+  // product_funnel_checkin above: that one is the real product-recommendation
+  // moment and only fires once the player has actually played enough for a
+  // recommendation to mean anything. This is just a quick, warm
+  // "how about you?" — no FD counters, no loan office, nothing sold.
+  savings_habit_checkin: {
+    speaker: 'companion',
+    animation: 'yes',
+    lines: ['Quick one, just curious — do you save money yourself?'],
+    options: [
+      { label: '✅ Yes', value: 'yes' },
+      { label: '❌ Not really', value: 'no' },
+    ],
+  },
+  savings_habit_method: {
+    speaker: 'companion',
+    animation: 'yes',
+    lines: ['Nice! Which way — bank, or keeping it at home?'],
+    options: [
+      { label: '🏦 Bank', value: 'bank' },
+      { label: '🏠 Home', value: 'home' },
+    ],
+  },
+  savings_habit_close_yes: {
+    speaker: 'companion',
+    animation: 'yes',
+    lines: ["Good to hear — that's genuinely a solid habit to have."],
+  },
+  savings_habit_close_no: {
+    speaker: 'companion',
+    animation: 'no',
+    lines: ["No worries at all — just wanted to check in. No pressure."],
   },
 }
