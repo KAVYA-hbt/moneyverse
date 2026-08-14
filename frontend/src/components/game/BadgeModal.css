@@ -1,13 +1,14 @@
 .badge-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 2, 14, 0.82);
+  background: radial-gradient(circle at center, rgba(76, 29, 149, 0.35) 0%, rgba(5, 2, 14, 0.9) 70%);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
   padding: 20px;
+  overflow: hidden;
   animation: badge-overlay-fade-in 0.25s ease-out;
 }
 
@@ -16,9 +17,67 @@
   to { opacity: 1; }
 }
 
+/* Gold/purple radial burst behind the card -- same visual language as
+   the level-up transition (.level-up-burst in GamePage.css), so the
+   badge reads as a continuation of that reveal rather than a separate,
+   plainer popup. */
+.badge-modal-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.85) 0%, rgba(139, 92, 246, 0.45) 45%, transparent 70%);
+  transform: translate(-50%, -50%);
+  animation: badge-burst-grow 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes badge-burst-grow {
+  from { width: 40px; height: 40px; opacity: 1; }
+  to { width: 1100px; height: 1100px; opacity: 0; }
+}
+
+/* Slow-rotating light rays behind the card, like a trophy spotlight. */
+.badge-modal-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 900px;
+  height: 900px;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(
+    rgba(250, 204, 21, 0.10) 0deg 6deg,
+    transparent 6deg 18deg
+  );
+  animation: badge-rays-spin 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes badge-rays-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.badge-modal-sparkle {
+  position: absolute;
+  color: #fde68a;
+  font-size: 20px;
+  opacity: 0;
+  pointer-events: none;
+  animation: badge-sparkle-twinkle 2.4s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
+}
+
+@keyframes badge-sparkle-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .badge-modal {
   position: relative;
-  width: min(360px, 92vw);
+  width: min(400px, 92vw);
   background: linear-gradient(160deg, rgba(24, 14, 46, 0.98), rgba(14, 8, 28, 0.98));
   border: 1px solid rgba(234, 179, 8, 0.35);
   border-radius: 22px;
@@ -28,6 +87,69 @@
   flex-direction: column;
   align-items: center;
   animation: badge-modal-pop-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Reveal variant -- adds the pulsing gold glow ring around the card
+   itself, layered on top of the base badge-modal look above. */
+.badge-modal--reveal {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(234, 179, 8, 0.25), 0 0 42px rgba(234, 179, 8, 0.25);
+  animation: badge-modal-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), badge-modal-glow-pulse 2.6s ease-in-out 0.5s infinite;
+}
+
+@keyframes badge-modal-glow-pulse {
+  0%, 100% { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(234, 179, 8, 0.25), 0 0 34px rgba(234, 179, 8, 0.22); }
+  50% { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(234, 179, 8, 0.4), 0 0 54px rgba(234, 179, 8, 0.4); }
+}
+
+/* Ribbon-style "Achievement unlocked" banner -- replaces the old plain
+   eyebrow text with a game-HUD-style tag: gold gradient, angled ends,
+   a light sweep animation, sitting above the passbook card. */
+.badge-modal-ribbon {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 8px 22px;
+  background: linear-gradient(to bottom, #fde68a, #eab308);
+  color: #1c0f33;
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.4);
+  overflow: hidden;
+  animation: badge-ribbon-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s both;
+}
+
+.badge-modal-ribbon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: badge-ribbon-sweep 2.6s ease-in-out 0.9s infinite;
+}
+
+@keyframes badge-ribbon-sweep {
+  0% { left: -60%; }
+  40%, 100% { left: 140%; }
+}
+
+@keyframes badge-ribbon-pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Frame around the canvas -- a thin gold hairline that echoes the
+   ribbon's gold, so the passbook reads as "the prize" sitting inside
+   the game's own trophy-case styling rather than a bare canvas. */
+.badge-modal-canvas-frame {
+  padding: 6px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(250, 204, 21, 0.5), rgba(139, 92, 246, 0.35));
+  animation: badge-modal-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
 }
 
 @keyframes badge-modal-pop-in {
@@ -62,8 +184,8 @@
 
 .badge-modal-canvas {
   width: 100%;
-  max-width: 300px;
-  aspect-ratio: 1 / 1;
+  max-width: 340px;
+  aspect-ratio: 520 / 640;
   border-radius: 18px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }

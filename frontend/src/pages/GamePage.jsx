@@ -237,17 +237,14 @@ export default function GamePage() {
   // Guarantees the loading screen shows for at least this long even when the
   // layout fetch resolves almost instantly (e.g. a fast local backend) —
   // otherwise it can flash for a few milliseconds and be imperceptible.
+  // Only matters for a first-time player -- see hasEnteredGame below,
+  // which skips LoadingScreen (and therefore this timer) entirely for
+  // anyone who's already launched once before.
   const [minLoadingTimeElapsed, setMinLoadingTimeElapsed] = useState(false)
   useEffect(() => {
     const timer = setTimeout(() => setMinLoadingTimeElapsed(true), 20000)
     return () => clearTimeout(timer)
   }, [])
-  // The player only ever leaves the intro crawl by actually tapping
-  // "Start Your Journey" — see LoadingScreen's onEnter. This state is what
-  // makes that tap the sole gate into the game page, instead of the
-  // screen silently auto-dismissing itself the instant assets happen to
-  // be ready.
-  const [hasEnteredGame, setHasEnteredGame] = useState(false)
   // True only once the city layout has actually arrived AND the minimum
   // crawl-watching time has passed. The intro button stays disabled until
   // this flips true, so tapping it can never drop the player into the
@@ -373,6 +370,42 @@ export default function GamePage() {
   const introTour = useIntroTour(sanitizedUser)
   const [bondMeter, setBondMeter] = useState(() => getBondMeter(sanitizedUser))
 
+  // The intro crawl/joystick-tutorial screen (LoadingScreen) is meant as
+  // a one-time "how to play" moment, not a loading spinner shown on every
+  // visit -- so it only ever renders for a player who's never gotten
+  // past it before. Checked synchronously via useState's initializer
+  // (not an effect) so this is already known on the very first render,
+  // before LoadingScreen would otherwise flash on screen for a returning
+  // player.
+  const hasLaunchedBeforeRef = useRef(false)
+  const [hasEnteredGame, setHasEnteredGame] = useState(() => {
+    try {
+      const launched = localStorage.getItem(`sbi_questcraft_has_launched_${sanitizedUser}`) === 'true'
+      hasLaunchedBeforeRef.current = launched
+      return launched
+    } catch {
+      return false
+    }
+  })
+
+  // Marks "seen" the moment the crawl actually APPEARS, not only once the
+  // player finishes it. It used to save only inside LoadingScreen's
+  // onEnter (the "Start Your Journey" tap) -- so refreshing partway
+  // through the ~20s minimum wait (before ever reaching that button)
+  // meant the flag never got written, and the very next load showed the
+  // exact same first-time crawl again, every time. A single viewing --
+  // even one cut short by a refresh -- is now enough to skip it going
+  // forward.
+  useEffect(() => {
+    if (hasEnteredGame) return
+    try {
+      localStorage.setItem(`sbi_questcraft_has_launched_${sanitizedUser}`, 'true')
+    } catch {
+      // localStorage unavailable (private browsing, etc.) -- not fatal,
+      // it just means the crawl may show again next time.
+    }
+  }, [hasEnteredGame, sanitizedUser])
+
   // New per-level task progress — tracks the NEW 5-task structure
   // (npc-help x1-3, recognition [L1 only], mini-game, capstone) shown to
   // the player. Kept entirely separate from questState's own completed-
@@ -415,6 +448,14 @@ export default function GamePage() {
     }
   })
 
+  // Kept in sync so the level-up effect (below) can read the CURRENT
+  // hint count at the exact moment a level completes, without needing
+  // hintScrolls in its own dependency array (which would re-fire that
+  // effect, with its side effects, on every single hint use).
+  useEffect(() => {
+    hintScrollsRef.current = hintScrolls
+  }, [hintScrolls])
+
   const [collectedTreasureIds, setCollectedTreasureIds] = useState(() => {
     try {
       const saved = localStorage.getItem(`sbi_questcraft_treasures_${sanitizedUser}`)
@@ -428,6 +469,17 @@ export default function GamePage() {
 
   // This will prevent audio from playing while the server syncs
   const isGameReadyRef = useRef(false)
+
+  // Tracks how well the player did THIS level, so the level's badge can
+  // show a real "Trust score" rather than a made-up number -- reset every
+  // time a new level begins (see the level-up effect below). Fast +
+  // accurate (no hints, finished within the target time) scores 100;
+  // score never drops below 80 for anyone who actually completes the
+  // level -- slower/hint-heavy play is graded down from there, not
+  // penalized below that floor.
+  const levelStartTimeRef = useRef(null)
+  const levelStartHintsRef = useRef(null)
+  const hintScrollsRef = useRef(0)
 
   // Repeats the notice board arrow every 5 seconds until the player has
   // opened it at least once -- the one-shot flashes (spawn + per-task)
@@ -723,13 +775,56 @@ export default function GamePage() {
       // level 1 -> level 2 transition, not per-quest. A single fixed
       // badge (no selection step) per your call: every other completion
       // below now gets its own "completed" effect instead of a badge.
+      //
+      // Deliberately delayed to start AFTER the level-up overlay's own
+      // 3200ms display window (see the effect below) instead of firing
+      // in this same tick. BadgeModal renders at z-index 10000 vs the
+      // overlay's 90, so queueing it immediately used to bury the LEVEL
+      // UP burst under the badge the instant it appeared — the overlay
+      // then auto-cleared itself on its own timer while the badge was
+      // still open, so by the time the badge was dismissed the
+      // transition had already silently expired, never actually seen.
       if (currentLevel === 2) {
-        queueBadge({
-          id: `title_level_${currentLevel}`,
-          title: 'Budget Boss',
-          subtitle: 'Always knows where the money goes.',
-          icon: '📊',
-        })
+        // Grades how the player played the level that JUST finished
+        // (Level 1, not the level they're entering) -- captured into
+        // locals before previousLevelRef/previousTitleRef get overwritten
+        // at the bottom of this effect, so the setTimeout below reads the
+        // completed level's own identity, not the new one.
+        const completedLevel = previousLevelRef.current
+        const completedLevelTitle = previousTitleRef.current
+        const hintsUsedThisLevel = Math.max(
+          0,
+          (levelStartHintsRef.current ?? hintScrollsRef.current) - hintScrollsRef.current
+        )
+        const elapsedMs = Date.now() - (levelStartTimeRef.current ?? Date.now())
+        const FAST_TARGET_MS = 15 * 60 * 1000 // 15 minutes counts as "fast"
+        const minutesOverTarget = Math.max(0, (elapsedMs - FAST_TARGET_MS) / 60000)
+        // Fast + accurate (no hints, within the target time) scores 100.
+        // Completing at all is worth at least 80 -- hints/slowness only
+        // ever pull the score DOWN from 100 toward that floor, never
+        // below it, so simply finishing is always rewarded.
+        const rawScore = 100 - hintsUsedThisLevel * 4 - minutesOverTarget
+        const trustPercent = Math.max(80, Math.min(100, Math.round(rawScore)))
+        const coinsAtBadgeTime = totalCoins
+
+        // Reset the tracker for the level the player is now entering.
+        levelStartTimeRef.current = Date.now()
+        levelStartHintsRef.current = hintScrollsRef.current
+
+        setTimeout(() => {
+          queueBadge({
+            id: `title_level_${currentLevel}`,
+            title: 'Budget Boss',
+            subtitle: 'Always knows where the money goes.',
+            icon: '📊',
+            meta: {
+              level: completedLevel,
+              levelTitle: completedLevelTitle,
+              trustPercent,
+              coins: coinsAtBadgeTime,
+            },
+          })
+        }, 3400)
       }
       // Narrator explains what this level MEANS for the story — separate
       // voice, separate beat, only ever shown once per player.
@@ -740,6 +835,12 @@ export default function GamePage() {
     }
     previousLevelRef.current = currentLevel
     previousTitleRef.current = currentTitle
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- totalCoins
+    // deliberately omitted: it's declared further down in this component,
+    // so listing it here would reference it before initialization on the
+    // very first render. Reading it inside the callback body (rather than
+    // in this array) is safe -- effects only run after the full render
+    // (including totalCoins's own declaration) has completed.
   }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin, queueBadge])
 
   useEffect(() => {
@@ -808,6 +909,8 @@ export default function GamePage() {
 
       if (!serverState) {
         isGameReadyRef.current = true
+        levelStartTimeRef.current = Date.now()
+        levelStartHintsRef.current = hintScrollsRef.current
         setTimeout(beginOnboarding, 5200)
         return
       }
@@ -819,6 +922,12 @@ export default function GamePage() {
       // Wait 500ms for state to settle, then allow sounds
       setTimeout(() => {
         isGameReadyRef.current = true
+        // Level timing/hint-usage baseline starts now, once real server
+        // state (including the actual hint count) has settled in --
+        // starting this any earlier would baseline against the default
+        // hint value instead of the player's real saved count.
+        levelStartTimeRef.current = Date.now()
+        levelStartHintsRef.current = serverState.hint_scrolls
       }, 500)
 
       if (isReturningPlayer) {
@@ -1954,18 +2063,43 @@ export default function GamePage() {
 
       if (somethingElseIsActive) return
 
-      // Figure out the current target (companion, or the active quest
-      // building) and its position — nothing to check against otherwise.
+      // Figure out the current target (companion, the Level 1 fixed
+      // sequence's next required step, or the active quest building) and
+      // its position — nothing to check against otherwise.
       let targetId = null
       let targetPos = null
+      let targetLabel = null
       if (companionPhase !== 'done' && companionSpawn) {
         targetId = 'companion'
         targetPos = { x: companionSpawn[0], z: companionSpawn[2] }
+      } else if (currentLevel === 1 && level1NextRequiredStep) {
+        // Level 1's fixed sequence (Arjun / Memory Match / Cash Flow
+        // Catch / Riya) never routes through questState.questBuildings at
+        // all -- Arjun/Riya live in fixedStoryNpcPositions and the two
+        // mini-games live in miniGameSpawns, both entirely separate from
+        // the generic quest-building system the branch below still
+        // checks. Without this branch, targetId/targetPos stayed null for
+        // this whole stretch, so the nudge system went silent between
+        // every one of these five tasks -- same posLookup pattern as the
+        // ground-arrow target (level1SequenceTarget) uses.
+        const posLookup = {
+          arjun: fixedStoryNpcPositions['arjun'],
+          memory_match: miniGameSpawns['memory_match'],
+          cash_flow_catch: miniGameSpawns['cash_flow_catch'],
+          riya: fixedStoryNpcPositions['riya'],
+        }
+        const pos = posLookup[level1NextRequiredStep]
+        if (pos) {
+          targetId = `level1_${level1NextRequiredStep}`
+          targetPos = { x: pos[0], z: pos[2] }
+          targetLabel = LEVEL_1_SEQUENCE_LABELS[level1NextRequiredStep] || level1NextRequiredStep
+        }
       } else if (activeQuestIdInChain) {
         const building = questState.questBuildings[activeQuestIdInChain]
         if (building?.render_x !== undefined) {
           targetId = activeQuestIdInChain
           targetPos = { x: building.render_x, z: building.render_z }
+          targetLabel = questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain
         }
       }
 
@@ -1998,7 +2132,7 @@ export default function GamePage() {
             storyNarrator.playRepeatable('companion_getting_close')
           } else {
             companionNudge.show('quest_getting_close', {
-              questLabel: questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain,
+              questLabel: targetLabel ?? targetId,
             })
           }
         }
@@ -2011,7 +2145,7 @@ export default function GamePage() {
             storyNarrator.playRepeatable('companion_not_approaching')
           } else {
             companionNudge.show('quest_not_approaching', {
-              questLabel: questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain,
+              questLabel: targetLabel ?? targetId,
             })
           }
         }
@@ -2020,7 +2154,7 @@ export default function GamePage() {
 
     return () => clearInterval(intervalId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companionPhase, activeQuestIdInChain, activeQuiz, quizLoading, anyPanelOpen, companionSpawn])
+  }, [companionPhase, activeQuestIdInChain, activeQuiz, quizLoading, anyPanelOpen, companionSpawn, currentLevel, level1NextRequiredStep, fixedStoryNpcPositions, miniGameSpawns, LEVEL_1_SEQUENCE_LABELS])
 
   // Level-scoped task count for the HUD pill — "3/5" within the current
   // level's 5 quests, not "3/25" across the whole 25-quest curriculum.
@@ -2607,7 +2741,10 @@ export default function GamePage() {
   return (
     <div className="game">
       {!hasEnteredGame && (
-        <LoadingScreen isReady={assetsReady} onEnter={() => setHasEnteredGame(true)} />
+        <LoadingScreen
+          isReady={assetsReady}
+          onEnter={() => setHasEnteredGame(true)}
+        />
       )}
 
       <div className="rotate-overlay">
