@@ -2,13 +2,15 @@ import { useState } from 'react'
 import MemoryMatchGame from './MemoryMatchGame.jsx'
 import PatternSequenceGame from './PatternSequenceGame.jsx'
 import QuickSortGame from './QuickSortGame.jsx'
+import CashFlowCatchGame from './CashFlowCatchGame.jsx'
 import { getMiniGameProgress, recordMiniGameResult } from '../../../utils/minigameStorage.js'
 import './MiniGames.css'
 
 const GAME_OPTIONS = [
-  { id: 'memory_match', label: 'Memory Match', icon: '🧠', Component: MemoryMatchGame },
-  { id: 'pattern_sequence', label: 'Pattern Sequence', icon: '🎨', Component: PatternSequenceGame },
-  { id: 'quick_sort', label: 'Quick Sort', icon: '⚡', Component: QuickSortGame },
+  { id: 'memory_match', label: 'Memory Match', icon: '\ud83e\udde0', Component: MemoryMatchGame },
+  { id: 'pattern_sequence', label: 'Pattern Sequence', icon: '\ud83c\udfa8', Component: PatternSequenceGame },
+  { id: 'quick_sort', label: 'Quick Sort', icon: '\u26a1', Component: QuickSortGame },
+  { id: 'cash_flow_catch', label: 'Cash Flow Catch', icon: '\ud83d\udcb0', Component: CashFlowCatchGame },
 ]
 
 /**
@@ -18,9 +20,13 @@ const GAME_OPTIONS = [
  * player's persisted progress before returning to the picker (or closing
  * entirely, caller's choice via onExit).
  */
-export default function MiniGameHub({ sanitizedUser, onExit, onReward }) {
+export default function MiniGameHub({ sanitizedUser, onExit, onReward, forcedGameId = null }) {
   const [progress, setProgress] = useState(() => getMiniGameProgress(sanitizedUser))
-  const [activeGameId, setActiveGameId] = useState(null)
+  // If launched from a specific world location (one of the 3 spread-out
+  // spawn points -- see GamePage.jsx), that location already implies
+  // which game this is, so skip the "pick one of 3" picker screen
+  // entirely and go straight into it.
+  const [activeGameId, setActiveGameId] = useState(forcedGameId)
 
   const handleGameComplete = (gameId, result) => {
     const updated = recordMiniGameResult(sanitizedUser, gameId, {
@@ -44,7 +50,10 @@ export default function MiniGameHub({ sanitizedUser, onExit, onReward }) {
       <ActiveComponent
         level={currentLevel}
         onComplete={(result) => handleGameComplete(activeGameId, result)}
-        onClose={() => setActiveGameId(null)}
+        // A forced (location-specific) game has no picker to fall back
+        // to -- closing it means leaving the mini-game entirely, not
+        // returning to a menu that shouldn't exist for this flow.
+        onClose={forcedGameId ? onExit : () => setActiveGameId(null)}
       />
     )
   }

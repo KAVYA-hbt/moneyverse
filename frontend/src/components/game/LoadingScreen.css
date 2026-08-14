@@ -1,113 +1,369 @@
-.ls-overlay {
+/* Container & Stars */
+.star-wars-intro {
   position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: radial-gradient(ellipse at 50% 30%, #1a1030 0%, #0a0618 70%);
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(180deg, #0f0518 0%, #2a0845 50%, #6411ad 100%);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  font-family: 'Pathway Gothic One', 'Century Gothic', sans-serif;
+  z-index: 9999;
+  /* Smooth fade/zoom transition into the game page -- see
+     .star-wars-intro--exiting below and handleStartJourney in
+     LoadingScreen.jsx. */
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.star-wars-intro--exiting {
+  opacity: 0;
+  transform: scale(1.06);
+  pointer-events: none;
+}
+
+.stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  background-image:
+    radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+    radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+    radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+  background-size: 550px 550px, 350px 350px, 250px 250px;
+  background-position: 0 0, 40px 60px, 130px 270px;
+  animation: moveStars 150s linear infinite;
+  z-index: 1;
+}
+
+@keyframes moveStars {
+  from { background-position: 0 0, 40px 60px, 130px 270px; }
+  to { background-position: 550px 550px, -350px 350px, 250px -250px; }
+}
+
+/* --- STRAIGHT, WIDER, FAST VERTICAL LINES --- */
+.moving-lines-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.moving-line {
+  position: absolute;
+  width: 5px; 
+  height: 120px; 
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(167, 139, 250, 0.9));
+  border-radius: 4px;
+  top: -150px;
+  transform: none; 
+  animation: warpSpeed linear infinite;
+}
+
+@keyframes warpSpeed {
+  0% {
+    transform: translateY(-150px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh);
+    opacity: 0;
+  }
+}
+
+/* --- FLOATING DECORATIVE EMOJIS IN CORNERS & EDGES --- */
+.floating-decorations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.decor-emoji {
+  position: absolute;
+  font-size: 2.5rem;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 10px rgba(254, 218, 74, 0.6));
+  animation: floatEmoji 4s ease-in-out infinite alternate;
+}
+
+.emoji-gift { top: 15%; left: 15%; animation-delay: 0s; }
+.emoji-coin { top: 20%; right: 15%; animation-delay: 1s; font-size: 2rem; }
+.emoji-game { bottom: 25%; right: 18%; animation-delay: 2s; }
+.emoji-sparkle { top: 40%; left: 10%; animation-delay: 1.5s; font-size: 1.8rem; }
+.emoji-robot { bottom: 35%; left: 16%; animation-delay: 0.5s; }
+.emoji-city { top: 12%; right: 30%; animation-delay: 2.5s; font-size: 2.2rem; }
+
+@keyframes floatEmoji {
+  0% { transform: translateY(0px) rotate(0deg); opacity: 0.4; }
+  100% { transform: translateY(-15px) rotate(5deg); opacity: 0.8; }
+}
+
+/* --- SIDE VISUALS --- */
+.side-visual {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 20%;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  z-index: 3;
+  pointer-events: none;
 }
 
-.ls-city {
+.left-visual { left: 5%; }
+.right-visual { right: 5%; }
+
+/* Left Side: Robot Animation */
+.robot-container {
+  position: relative;
+  width: 80px;
+  animation: floatRobot 4s ease-in-out infinite;
+}
+
+.robot-head {
+  width: 60px;
+  height: 45px;
+  background: #4ade80;
+  border-radius: 20px 20px 10px 10px;
+  margin: 0 auto 5px;
+  position: relative;
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+}
+
+.robot-eye {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 45%;
+  top: 15px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #fff;
+  animation: blink 4s infinite;
+}
+.left-eye { left: 12px; }
+.right-eye { right: 12px; }
+
+.robot-body {
+  width: 40px;
+  height: 30px;
+  background: #3b82f6;
+  border-radius: 10px;
+  margin: 0 auto;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.robot-glow {
+  width: 30px;
+  height: 10px;
+  background: #feda4a;
+  border-radius: 50%;
+  margin: 20px auto 0;
+  filter: blur(8px);
+  animation: pulseGlow 2s infinite alternate;
+}
+
+@keyframes floatRobot {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+@keyframes blink {
+  0%, 96%, 98%, 100% { transform: scaleY(1); }
+  97%, 99% { transform: scaleY(0.1); }
+}
+@keyframes pulseGlow {
+  from { opacity: 0.5; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1.2); }
+}
+
+/* Right Side: City Building Animation */
+.city-container {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  gap: 14px;
-  padding: 0 10%;
+  gap: 10px;
+  height: 150px;
+  opacity: 0.8;
 }
 
-.ls-building {
-  width: 60px;
-  border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.35), rgba(59, 130, 246, 0.2));
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
-  animation: ls-rise 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+.blueprint-building {
+  width: 30px;
+  background: transparent;
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4), inset 0 0 10px rgba(59, 130, 246, 0.2);
+  border-bottom: none;
+  transform-origin: bottom;
+  animation: buildUp 10s ease-out forwards infinite;
+  opacity: 0;
 }
 
-.ls-building--1 { height: 120px; animation-delay: 0.05s; }
-.ls-building--2 { height: 190px; animation-delay: 0.2s; }
-.ls-building--3 { height: 260px; animation-delay: 0.1s; }
-.ls-building--4 { height: 170px; animation-delay: 0.3s; }
-.ls-building--5 { height: 140px; animation-delay: 0.15s; }
+.b1 { height: 80px; animation-delay: 2s; }
+.b2 { height: 140px; animation-delay: 5s; }
+.b3 { height: 100px; animation-delay: 8s; }
+.b4 { height: 120px; animation-delay: 11s; }
 
-@keyframes ls-rise {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes buildUp {
+  0% { transform: scaleY(0); opacity: 0; }
+  20% { transform: scaleY(1); opacity: 1; }
+  80% { transform: scaleY(1); opacity: 1; border-color: #feda4a; box-shadow: 0 0 15px rgba(254, 218, 74, 0.6); background: rgba(254, 218, 74, 0.1); }
+  100% { transform: scaleY(1); opacity: 0; }
 }
 
-.ls-content {
-  position: relative;
-  z-index: 1;
+/* --- WIDER CENTER TEXT CRAWL COVERING MOST OF THE PAGE --- */
+.crawl-container {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding-bottom: 15%;
+  justify-content: center;
+  position: relative;
+  width: 89%; 
+  height: 100%;
+  perspective: 400px;
+  z-index: 2;
 }
 
-.ls-spinner {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 4px solid rgba(139, 92, 246, 0.2);
-  border-top-color: #8b5cf6;
-  animation: ls-spin 0.9s linear infinite;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+.crawl-text {
+  position: absolute;
+  top: 100%;
+  width: 100%;
+  color: #feda4a; 
+  font-size: 2.6rem; 
+  font-weight: 700;
+  line-height: 1.7;
+  text-align: justify;
+  transform-origin: 50% 100%;
+  /* Plays through ONCE and holds at the end -- this used to be
+     `infinite`, which meant the crawl could never actually finish; now it
+     genuinely reaches its conclusion and waits there for the player to
+     tap through, rather than looping forever underneath them. */
+  animation: crawl 42s linear 1 forwards;
 }
 
-@keyframes ls-spin {
-  to { transform: rotate(360deg); }
-}
-
-.ls-label {
-  margin: 0;
-  font-family: 'Sora', sans-serif;
-  font-weight: 800;
-  font-size: 18px;
-  color: #eaf1fb;
-  letter-spacing: 0.02em;
-}
-
-.ls-tip {
-  margin: 0;
-  max-width: 360px;
+.intro-title {
   text-align: center;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-style: italic;
-  color: #94a3b8;
-  min-height: 36px;
+  margin-bottom: 60px;
 }
 
-@media (orientation: landscape) and (max-height: 600px) {
-  .ls-city {
-    height: 35%;
-    gap: 10px;
-  }
+.intro-title p {
+  font-size: 2.2rem;
+  margin: 0;
+  letter-spacing: 2px;
+}
 
-  .ls-building {
-    width: 44px;
-  }
+.intro-title h1 {
+  font-size: 5.5rem; 
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 6px;
+  text-shadow: 0 0 15px rgba(254, 218, 74, 0.7);
+}
 
-  .ls-spinner {
-    width: 36px;
-    height: 36px;
-    border-width: 3px;
-  }
+.crawl-text p {
+  margin-bottom: 45px;
+}
 
-  .ls-label {
-    font-size: 15px;
+@keyframes crawl {
+  0% {
+    top: 100%;
+    transform: rotateX(25deg) translateZ(0);
   }
+  100% {
+    top: -100%;
+    transform: rotateX(25deg) translateY(-2500px);
+  }
+}
 
-  .ls-tip {
-    font-size: 11px;
-    max-width: 280px;
-  }
+/* --- JOYSTICK STYLING --- */
+.mobile-joystick-container {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  z-index: 1000;
+  touch-action: none;
+}
+
+.joystick-base {
+  width: 100px;
+  height: 100px;
+  background: rgba(100, 17, 173, 0.4);
+  border: 2px solid rgba(167, 139, 250, 0.6);
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(100, 17, 173, 0.6);
+  cursor: pointer;
+}
+
+.joystick-stick {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  transition: transform 0.05s ease-out;
+}
+
+/* --- MATCHING GLOSSY BLUE "START YOUR JOURNEY" BUTTON STYLING --- */
+.start-journey-button {
+  position: absolute;
+  bottom: 40px;
+  right: 40px;
+  z-index: 10;
+  background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  border: 1px solid #60a5fa;
+  padding: 14px 32px;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 1px;
+  border-radius: 50px; /* Pill shape matching reference */
+  box-shadow: 0 4px 15px rgba(29, 78, 216, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+  opacity: 1; /* Visible immediately without waiting for timers */
+}
+
+.start-journey-button:hover {
+  background: linear-gradient(to bottom, #60a5fa, #2563eb);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.8), inset 0 2px 6px rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Dimmed + inert until the city has actually finished loading -- makes
+   the "strictly after loading" rule visible, not just enforced silently
+   in JS: the player can SEE it's not ready yet, then see it light up. */
+.start-journey-button--disabled {
+  background: linear-gradient(to bottom, #4b5563, #374151);
+  border-color: #6b7280;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.start-journey-button--disabled:hover {
+  background: linear-gradient(to bottom, #4b5563, #374151);
+  box-shadow: none;
+  transform: none;
 }

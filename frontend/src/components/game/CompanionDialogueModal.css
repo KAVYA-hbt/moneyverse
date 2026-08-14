@@ -52,6 +52,11 @@
   box-shadow: 0 0 22px rgba(244, 185, 66, 0.6), 0 8px 18px rgba(0, 0, 0, 0.5);
 }
 
+.cdm-portrait--narrator {
+  background: linear-gradient(145deg, #64748b, #cbd5e1);
+  box-shadow: 0 0 22px rgba(203, 213, 225, 0.55), 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
 .cdm-portrait--player {
   background: linear-gradient(145deg, #22c55e, #16a34a);
   box-shadow: 0 0 22px rgba(34, 197, 94, 0.6), 0 8px 18px rgba(0, 0, 0, 0.5);
@@ -78,6 +83,12 @@
 .cdm-name-tag--mayor {
   background: linear-gradient(120deg, #f59e0b, #f4b942);
   box-shadow: 0 0 10px rgba(244, 185, 66, 0.5);
+}
+
+.cdm-name-tag--narrator {
+  background: linear-gradient(120deg, #64748b, #cbd5e1);
+  box-shadow: 0 0 10px rgba(203, 213, 225, 0.4);
+  color: #1e293b;
 }
 
 .cdm-name-tag--player {

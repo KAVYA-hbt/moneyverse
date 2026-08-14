@@ -3,7 +3,6 @@ import './AdvisoryConversationModal.css'
 
 const SPEAKER_META = {
   npc: { align: 'left', className: 'acm-bubble--npc' },
-  robot: { align: 'left', className: 'acm-bubble--robot' },
   player: { align: 'right', className: 'acm-bubble--player' },
 }
 
@@ -16,14 +15,46 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
     }
   }, [conversation.messages])
 
-  // Same second-layer defense as CompanionDialogueModal — refuse to
-  // render if there's genuinely nothing in the chat log yet, instead of
-  // showing an empty panel with a dangling Okay button.
   if (!conversation.isActive || conversation.messages.length === 0) return null
 
   return (
     <div className="acm-overlay">
       <div className="acm-panel">
+        {/* Robot help -- sits OUTSIDE/above the chat panel entirely, not
+            as a message in the log. Only rendered when this phase/path
+            actually has a hint written for it. */}
+        {conversation.robotHelpAvailable && (
+          <div className="acm-robot-dock">
+            <button
+              className="acm-robot-help-btn"
+              onClick={conversation.requestRobotHelp}
+              aria-label="Need help?"
+              title="Need help?"
+            >
+              🤖 <span>Need help?</span>
+            </button>
+
+            {conversation.robotHintVisible && (
+              <div className="acm-robot-hint-popup">
+                <button className="acm-robot-hint-close" onClick={conversation.dismissRobotHint} aria-label="Close hint">
+                  ✕
+                </button>
+                <p>{conversation.robotHintText}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* The takeaway lesson -- fades in beside the conversation once
+            the resolution wraps up, never AS a chat bubble the player has
+            to tap past. It doesn't cost a turn: the real mid-resolution
+            choices are already tappable the moment this appears. */}
+        {conversation.takeawayVisible && conversation.takeawayText && (
+          <div className="acm-takeaway-dock">
+            {conversation.takeawayText}
+          </div>
+        )}
+
         <div className="acm-header">
           <span className="acm-header-title">{conversation.npcName}</span>
           <button className="acm-close-btn" onClick={conversation.close}>✕</button>
@@ -33,19 +64,16 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
           {conversation.messages.map((msg) => {
             const meta = SPEAKER_META[msg.speaker] || SPEAKER_META.npc
             const isPlayer = msg.speaker === 'player'
+
             return (
               <div key={msg.id} className={`acm-row acm-row--${meta.align}`}>
                 {!isPlayer && (
-                  <div className={`acm-avatar ${msg.speaker === 'robot' ? 'acm-avatar--robot' : 'acm-avatar--npc'}`}>
-                    {msg.speaker === 'robot' ? '🤖' : (npcPortrait ? <img src={npcPortrait} alt="" /> : '🧑')}
+                  <div className="acm-avatar acm-avatar--npc">
+                    {npcPortrait ? <img src={npcPortrait} alt="" /> : '🧑'}
                   </div>
                 )}
                 <div className={`acm-bubble ${meta.className}`}>{msg.text}</div>
                 {isPlayer && (
-                  // Player's own messages carry their own avatar on the
-                  // right, WhatsApp-style — matches how NPC/robot lines
-                  // carry an avatar on the left, instead of the player's
-                  // bubbles floating with no identity attached.
                   <div className="acm-avatar acm-avatar--player">
                     {playerPortrait ? <img src={playerPortrait} alt="" /> : '🙂'}
                   </div>
@@ -71,30 +99,59 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
           )}
 
           {conversation.showConfirmCards && (
-            <div className="acm-cards-row acm-cards-row--confirm">
+            <div className="acm-cards-row">
               <button className="acm-card acm-card--yes" onClick={() => conversation.confirmChoice(true)}>
                 ✅ Yes, do it
               </button>
               <button className="acm-card acm-card--no" onClick={() => conversation.confirmChoice(false)}>
                 🤔 No, let me think
               </button>
-              {/* Robot-help icon — always available during confirm, not
-                  just on hesitation, per the dialogue redesign spec. */}
-              <button
-                className="acm-robot-help-btn"
-                onClick={conversation.requestRobotHelp}
-                aria-label="Ask the robot"
-                title="Ask the robot"
-              >
-                🤖
-              </button>
             </div>
           )}
 
-          {conversation.showResolveContinue && (
-            <button className="acm-continue-btn" onClick={conversation.advanceResolution}>
-              Continue
-            </button>
+          {/* Real tap-choice reaction chips -- replaces the old passive
+              "Continue" button between resolution lines. Both options
+              advance the story; the player always has an actual pick. */}
+          {conversation.resolutionReactionOptions && (
+            <div className="acm-cards-row">
+              {conversation.resolutionReactionOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  className="acm-card"
+                  onClick={() => conversation.selectResolutionReaction(opt.value, opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {conversation.midResolutionOptions && (
+            <div className="acm-cards-row">
+              {conversation.midResolutionOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  className="acm-card"
+                  onClick={() => conversation.selectMidResolutionOption(opt.value, opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {conversation.goodbyeOptions && (
+            <div className="acm-cards-row">
+              {conversation.goodbyeOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  className="acm-card"
+                  onClick={() => conversation.selectGoodbyeOption(opt.value, opt.label)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {conversation.phase === 'done' && (

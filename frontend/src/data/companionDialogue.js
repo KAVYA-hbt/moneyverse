@@ -15,6 +15,19 @@
 // questLabel, npcName — whatever the trigger site has on hand.
 
 export const DIALOGUE_BEATS = {
+  // ---- First-time proactive greeting (checklist item #5) ----
+  // Fires once, ever, right after the narrator's onboarding lines finish
+  // -- a real "the companion notices you and says hi" moment instead of
+  // silence, using the player's own name (see GamePage.jsx's wiring).
+  companion_first_greeting: {
+    speaker: 'companion',
+    animation: 'wave',
+    lines: [
+      (ctx) => `Hi ${ctx.playerName || 'there'}, hope you're doing well -- we've got a lot to explore today.`,
+      "Want help finding someone? There's usually somebody nearby who could use it.",
+    ],
+  },
+
   // ---- Stage 2: First NPC quest ----
   first_quest_approach: {
     speaker: 'companion',
@@ -224,41 +237,5 @@ export const DIALOGUE_BEATS = {
     speaker: 'companion',
     animation: 'no',
     lines: ["Totally fine. I'll drop it — for now."],
-  },
-
-  // Fires once, right after an NPC advisory chat closes (see
-  // fireSavingsHabitCheckin in GamePage.jsx) — a short, honest
-  // self-report, NOT a product pitch. Deliberately separate from
-  // product_funnel_checkin above: that one is the real product-recommendation
-  // moment and only fires once the player has actually played enough for a
-  // recommendation to mean anything. This is just a quick, warm
-  // "how about you?" — no FD counters, no loan office, nothing sold.
-  savings_habit_checkin: {
-    speaker: 'companion',
-    animation: 'yes',
-    lines: ['Quick one, just curious — do you save money yourself?'],
-    options: [
-      { label: '✅ Yes', value: 'yes' },
-      { label: '❌ Not really', value: 'no' },
-    ],
-  },
-  savings_habit_method: {
-    speaker: 'companion',
-    animation: 'yes',
-    lines: ['Nice! Which way — bank, or keeping it at home?'],
-    options: [
-      { label: '🏦 Bank', value: 'bank' },
-      { label: '🏠 Home', value: 'home' },
-    ],
-  },
-  savings_habit_close_yes: {
-    speaker: 'companion',
-    animation: 'yes',
-    lines: ["Good to hear — that's genuinely a solid habit to have."],
-  },
-  savings_habit_close_no: {
-    speaker: 'companion',
-    animation: 'no',
-    lines: ["No worries at all — just wanted to check in. No pressure."],
   },
 }

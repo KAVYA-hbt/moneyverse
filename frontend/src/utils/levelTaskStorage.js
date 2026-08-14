@@ -17,6 +17,15 @@ function storageKey(sanitizedUser, level) {
 function defaultProgress() {
   return {
     npcHelpCount: 0,
+    // Which specific NPCs the player has actually finished talking to --
+    // separate from npcHelpCount (which only counts toward the quota and
+    // used to freeze once it hit NPC_HELP_QUOTA). Without this, a card
+    // for any NPC beyond the quota could never be marked done, since
+    // there was nothing else recording "I actually talked to Riya" --
+    // just a shared counter that stopped moving. That's what caused the
+    // objective arrow to send the player back to Riya forever after the
+    // quota's first NPC (Arjun) was done.
+    completedNpcIds: [],
     recognitionDone: false,
     minigameDone: false,
     capstoneDone: false,

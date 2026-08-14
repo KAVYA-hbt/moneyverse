@@ -175,7 +175,6 @@
 }
 
 .nb-card {
-  perspective: 800px;
   background: none;
   border: none;
   padding: 0;
@@ -204,19 +203,7 @@
   transform: rotate(0deg) scale(1.04);
 }
 
-.nb-card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
-  transform-style: preserve-3d;
-}
-
-.nb-card--flipped .nb-card-inner {
-  transform: rotateY(180deg);
-}
-
-/* The pushpin — a small glossy circle sitting at the top edge of each
+/* The pushpin -- a small glossy circle sitting at the top edge of each
    card, exactly like the reference photo's pinned notes. Color cycles
    per card so the board doesn't look uniform. */
 .nb-card::before {
@@ -245,34 +232,72 @@
   background: radial-gradient(circle at 35% 30%, #86efac, #16a34a 70%);
 }
 
-.nb-card-face {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
+/* Content sits directly on the card now -- no flip, no back face. Was
+   .nb-card-face + .nb-card-front before; merged into .nb-card itself
+   since there's only ever one face to show now. */
+.nb-card {
+  position: relative;
+  background: #f4f1ea;
   border-radius: 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 6px;
   padding: 10px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.nb-card-front {
-  background: #f4f1ea;
-}
-
-.nb-card--done .nb-card-front {
+.nb-card--done {
   outline: 3px solid rgba(74, 222, 128, 0.8);
   outline-offset: -3px;
   opacity: 0.85;
 }
 
-.nb-card-back {
-  background: #f4f1ea;
-  transform: rotateY(180deg);
-  justify-content: center;
+/* Tutorial-style attention arrow pointing at the Notice Board trigger --
+   flashed briefly (see GamePage.jsx's triggerNoticeBoardArrow) rather
+   than shown permanently. */
+.nb-trigger-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.nb-attention-arrow {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 4px;
+  pointer-events: none;
+  animation: nb-arrow-bob 0.8s ease-in-out infinite;
+  z-index: 10;
+}
+
+.nb-attention-arrow span {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(139, 92, 246, 0.9);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+
+.nb-attention-arrow-glyph {
+  font-size: 20px;
+  color: #8b5cf6;
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.8);
+}
+
+@keyframes nb-arrow-bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-6px); }
 }
 
 .nb-card-icon {
@@ -281,8 +306,9 @@
 
 .nb-card-portrait {
   width: 100%;
-  height: 68%;
+  height: 48%;
   object-fit: cover;
+  object-position: top center;
   border-radius: 2px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
@@ -343,6 +369,21 @@
   font-size: 14px;
   color: #1e293b;
   transform: rotate(-0.5deg);
+}
+
+.nb-hand-4 {
+  font-family: 'Shadows Into Light', 'Kalam', cursive;
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e293b;
+  transform: rotate(0.8deg);
+}
+
+.nb-hand-5 {
+  font-family: 'Indie Flower', 'Caveat', cursive;
+  font-size: 15px;
+  color: #1e293b;
+  transform: rotate(-1.3deg);
 }
 
 .nb-card-pin-btn {

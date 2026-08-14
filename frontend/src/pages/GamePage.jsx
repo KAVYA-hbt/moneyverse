@@ -30,21 +30,24 @@ import AdvisoryConversationModal from '../components/game/AdvisoryConversationMo
 import { QUEST_META } from '../data/questCatalog.js'
 import { pickAdvisoryTopicForLevel, LEVEL_CAPSTONE_QUESTS } from '../data/levelTasks.js'
 import { syncPlayer, collectTreasureOnServer } from '../services/backendSync.js'
-import { emitTelemetry } from '../telemetry/telemetryBus.js'
 import { getApiBaseUrl } from '../utils/apiBase.js'
 import { MobileControls } from '../components/game/MobileControls.jsx'
 import CompanionWorldModel from '../components/game/CompanionWorldModel.jsx'
 import MiniGameHub from '../components/game/minigames/MiniGameHub.jsx'
 import CompanionDialogueModal from '../components/game/CompanionDialogueModal.jsx'
+import BadgeModal from '../components/game/BadgeModal.jsx'
+import { emitTelemetry } from '../telemetry/telemetryBus.js'
 import { useCompanionNarrative } from '../hooks/useCompanionNarrative.js'
-import StoryNarratorOverlay from '../components/game/StoryNarratorOverlay.jsx'
+import { useCompanionNudge } from '../hooks/useCompanionNudge.js'
 import { useStoryNarrator } from '../hooks/useStoryNarrator.js'
 import LoadingScreen from '../components/game/LoadingScreen.jsx'
 import GuidePanel from '../components/game/GuidePanel.jsx'
 import NoticeBoard from '../components/game/NoticeBoard.jsx'
 import npcPortrait1 from '../assets/npc/npc_1.png'
 import npcPortrait2 from '../assets/npc/npc_2.png'
-import npcPortrait3 from '../assets/npc/npc_3.png'
+import npcPortrait3 from '../assets/npc/npc_3.jpg'
+import npcPortrait4 from '../assets/npc/npc_4.jpg'
+import npcPortrait5 from '../assets/npc/npc_5.png'
 import IntroTourOverlay from '../components/game/IntroTourOverlay.jsx'
 import { useIntroTour } from '../hooks/useIntroTour.js'
 import { cdnUrl } from '../config/assetCdn.js'
@@ -231,14 +234,71 @@ export default function GamePage() {
   }
 
   const [layout, setLayout] = useState(null)
-  // Guarantees the loading screen shows for at least 800ms even when the
+  // Guarantees the loading screen shows for at least this long even when the
   // layout fetch resolves almost instantly (e.g. a fast local backend) —
   // otherwise it can flash for a few milliseconds and be imperceptible.
   const [minLoadingTimeElapsed, setMinLoadingTimeElapsed] = useState(false)
   useEffect(() => {
-    const timer = setTimeout(() => setMinLoadingTimeElapsed(true), 800)
+    const timer = setTimeout(() => setMinLoadingTimeElapsed(true), 20000)
     return () => clearTimeout(timer)
   }, [])
+  // The player only ever leaves the intro crawl by actually tapping
+  // "Start Your Journey" — see LoadingScreen's onEnter. This state is what
+  // makes that tap the sole gate into the game page, instead of the
+  // screen silently auto-dismissing itself the instant assets happen to
+  // be ready.
+  const [hasEnteredGame, setHasEnteredGame] = useState(false)
+  // True only once the city layout has actually arrived AND the minimum
+  // crawl-watching time has passed. The intro button stays disabled until
+  // this flips true, so tapping it can never drop the player into the
+  // game page before loading is strictly finished.
+  const assetsReady = !!layout && minLoadingTimeElapsed
+
+  // --- Shareable badge queue -----------------------------------------
+  // Badges are queued (not shown immediately/simultaneously) so that a
+  // quest completion + a mini-game finishing back-to-back don't stack
+  // two modals on top of each other -- they show one at a time, in the
+  // order they were earned. shownBadgeIdsRef stops the same badge id
+  // from ever being queued twice in one session (e.g. a re-render
+  // re-running an effect shouldn't re-queue "Helped Riya!").
+  const [badgeQueue, setBadgeQueue] = useState([])
+  const shownBadgeIdsRef = useRef(new Set())
+  const activeBadge = badgeQueue[0] ?? null
+
+  const queueBadge = useCallback((badge) => {
+    if (shownBadgeIdsRef.current.has(badge.id)) return
+    shownBadgeIdsRef.current.add(badge.id)
+    setBadgeQueue((q) => [...q, badge])
+  }, [])
+
+  const closeBadge = useCallback(() => {
+    setBadgeQueue((q) => q.slice(1))
+  }, [])
+
+  const handleBadgePublished = useCallback((badgeId, badgeName) => {
+    emitTelemetry(profile.email, {
+      type: 'badge_published',
+      payload: { badge_id: badgeId, name_on_badge: badgeName, level: currentLevel },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // --- Post product-funnel "Onboard" CTA ------------------------------
+  // A small, non-blocking call-to-action that appears once the player has
+  // actually read (tapped through) the companion's product-funnel
+  // response line -- see fireProductFunnelCheckin below, which passes a
+  // completion callback into that beat specifically to flip this on at
+  // the right moment rather than guessing with a timer.
+  const [showOnboardCta, setShowOnboardCta] = useState(false)
+  const handleOnboardClick = useCallback(() => {
+    emitTelemetry(profile.email, {
+      type: 'onboard_cta_click',
+      payload: { level: currentLevel },
+    })
+    setShowOnboardCta(false)
+    navigate('/onboard')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate])
   // Companion flow state machine — Robot spawns automatically as soon as
   // GamePage loads (no picker screen, this IS the first task, discoverable
   // in-world exactly like any quest). 'placed' (dead, on the road, player
@@ -262,6 +322,12 @@ export default function GamePage() {
   const [companionNameInput, setCompanionNameInput] = useState('')
   const [miniGameHubOpen, setMiniGameHubOpen] = useState(false)
   const narrative = useCompanionNarrative()
+  // Ambient, non-blocking guidance ("head to Arjun", "follow the arrow",
+  // "nice work on that one") — floats above the companion instead of the
+  // full-width modal narrative uses, and never needs a tap to dismiss.
+  // See useCompanionNudge.js for why these are kept separate from
+  // narrative beats that actually need a decision.
+  const companionNudge = useCompanionNudge()
   const advisoryConversation = useAdvisoryConversation()
   // Stage 2 fires ONCE, on the player's very first quest — an onboarding
   // moment, not something that should repeat on quest #2 through #25.
@@ -273,6 +339,7 @@ export default function GamePage() {
   const [minimapExpanded, setMinimapExpanded] = useState(false)
   const [guidePanelOpen, setGuidePanelOpen] = useState(false)
   const [noticeBoardOpen, setNoticeBoardOpen] = useState(false)
+  const [showNoticeBoardArrow, setShowNoticeBoardArrow] = useState(false)
   const [pinnedTaskId, setPinnedTaskId] = useState(null)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [topBarCollapsed, setTopBarCollapsed] = useState(false)
@@ -314,6 +381,8 @@ export default function GamePage() {
   // through the same tested engine as before.
   const [levelTaskProgress, setLevelTaskProgress] = useState({
     npcHelpCount: 0,
+    completedNpcIds: [],
+    completedMinigameIds: [],
     recognitionDone: false,
     minigameDone: false,
     capstoneDone: false,
@@ -323,6 +392,19 @@ export default function GamePage() {
     setBondMeter(incrementBondMeter(sanitizedUser, amount))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sanitizedUser])
+
+  // Small tutorial-style highlight arrow pointing at the notice board
+  // trigger (checklist item #6) -- fired once at spawn (after the
+  // opening narration/greeting) and again after every task completion,
+  // 3 seconds each time. A single ref-tracked timeout so overlapping
+  // triggers (e.g. two tasks completing in quick succession) restart
+  // the 3-second window cleanly instead of stacking multiple timers.
+  const noticeBoardArrowTimeoutRef = useRef(null)
+  const triggerNoticeBoardArrow = useCallback(() => {
+    clearTimeout(noticeBoardArrowTimeoutRef.current)
+    setShowNoticeBoardArrow(true)
+    noticeBoardArrowTimeoutRef.current = setTimeout(() => setShowNoticeBoardArrow(false), 3000)
+  }, [])
 
   const [hintScrolls, setHintScrolls] = useState(() => {
     try {
@@ -346,6 +428,23 @@ export default function GamePage() {
 
   // This will prevent audio from playing while the server syncs
   const isGameReadyRef = useRef(false)
+
+  // Repeats the notice board arrow every 5 seconds until the player has
+  // opened it at least once -- the one-shot flashes (spawn + per-task)
+  // are easy to miss if you're not looking right at that moment; this
+  // keeps nudging without becoming permanent nagging, since it stops
+  // for good the first time the board is actually opened.
+  const hasEverOpenedNoticeBoardRef = useRef(false)
+  useEffect(() => {
+    if (noticeBoardOpen) hasEverOpenedNoticeBoardRef.current = true
+  }, [noticeBoardOpen])
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isGameReadyRef.current || hasEverOpenedNoticeBoardRef.current) return
+      triggerNoticeBoardArrow()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [triggerNoticeBoardArrow])
 
   // Guards against a stale async response applying itself after the
   // player has navigated away or the component has otherwise unmounted —
@@ -407,7 +506,7 @@ export default function GamePage() {
       !narrative.isActive
     ) {
       hasShownFirstQuestApproachRef.current = true
-      narrative.play('first_quest_approach', { questLabel: nearbyQuest.label })
+      companionNudge.show('first_quest_approach', { questLabel: nearbyQuest.label })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nearbyQuest, companionPhase])
@@ -478,6 +577,56 @@ export default function GamePage() {
   const getTaskChainId = useCallback((slotIndex) => levelChainSlice[slotIndex], [levelChainSlice])
   const NPC_HELP_QUOTA = currentLevel === 1 ? 1 : 3
 
+  // Level 1's exact required order (per explicit request) -- companion
+  // repair, then Arjun specifically, then Memory Match specifically,
+  // then Cash Flow Catch specifically, then Riya specifically. Meera and
+  // the other 2 mini-games are NOT part of this required chain; they
+  // stay interactable (bonus content) but don't advance this sequence.
+  // Only applies to level 1 -- other levels keep the existing flexible
+  // "any N of the pool" system unless told otherwise.
+  const LEVEL_1_SEQUENCE = useMemo(() => ['companion', 'arjun', 'memory_match', 'cash_flow_catch', 'riya'], [])
+  const LEVEL_1_SEQUENCE_LABELS = useMemo(() => ({
+    companion: 'fixing my companion',
+    arjun: "helping Arjun",
+    memory_match: 'the Memory Match game',
+    cash_flow_catch: 'the Cash Flow Catch game',
+    riya: 'helping Riya',
+  }), [])
+
+  const level1NextRequiredStep = useMemo(() => {
+    if (currentLevel !== 1) return null
+    if (companionPhase !== 'done') return 'companion'
+    if (!(levelTaskProgress.completedNpcIds || []).includes('arjun')) return 'arjun'
+    if (!(levelTaskProgress.completedMinigameIds || []).includes('memory_match')) return 'memory_match'
+    if (!(levelTaskProgress.completedMinigameIds || []).includes('cash_flow_catch')) return 'cash_flow_catch'
+    if (!(levelTaskProgress.completedNpcIds || []).includes('riya')) return 'riya'
+    return null // sequence complete
+  }, [currentLevel, companionPhase, levelTaskProgress.completedNpcIds, levelTaskProgress.completedMinigameIds])
+
+  // Safety-net reconciliation, one-shot per level: the per-event handlers
+  // above only write a chain slot the moment a task is FRESHLY completed,
+  // so a save made before this 5-slot remapping existed (or any other way
+  // a slot got skipped) can leave the notice board showing the sequence
+  // as fully done locally while questState's real completed-quest count
+  // never actually reached 5 -- meaning the level never flips and the
+  // level-up banner/badge/product-funnel check-in never fire, even though
+  // the board reads 100%. Once level1NextRequiredStep says the sequence
+  // is genuinely done, force-complete all 5 slots directly; completeQuest()
+  // already no-ops on an id that's already in the set, so this is harmless
+  // even when everything was already correctly in sync.
+  const reconciledLevel1Ref = useRef(false)
+  useEffect(() => {
+    if (currentLevel !== 1 || level1NextRequiredStep !== null) return
+    if (reconciledLevel1Ref.current) return
+    reconciledLevel1Ref.current = true
+    for (let i = 0; i < 5; i++) {
+      const chainId = getTaskChainId(i)
+      if (chainId) questState.completeQuest(chainId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLevel, level1NextRequiredStep])
+
+
   // Hydrates task progress for whatever the current level actually is —
   // for a level never visited before, storage naturally has nothing
   // saved and this correctly returns all-zero (the old "reset on level
@@ -505,7 +654,13 @@ export default function GamePage() {
       return
     }
     saveLevelTaskProgress(sanitizedUser, currentLevel, levelTaskProgress)
-  }, [levelTaskProgress, sanitizedUser, currentLevel])
+    // Points the notice board arrow at the next task right after any
+    // task genuinely completes -- deliberately in this same
+    // post-hydration branch so it never fires on the initial load when
+    // progress is merely being restored from storage, only on a real
+    // completion during play.
+    triggerNoticeBoardArrow()
+  }, [levelTaskProgress, sanitizedUser, currentLevel, triggerNoticeBoardArrow])
 
   // The old chain/building system still detects proximity to EVERY
   // unlocked incomplete quest in the chain (see InteractionSystem.jsx) —
@@ -527,7 +682,13 @@ export default function GamePage() {
     if (checkedInLevelsRef.current.has(level)) return
     checkedInLevelsRef.current.add(level)
     narrative.play('product_funnel_checkin', {}, (value) => {
-      narrative.play(`product_funnel_response_${value}`)
+      // The completion callback here fires once the player has actually
+      // tapped through the response line (see useCompanionNarrative's
+      // advance()) -- not on a blind timer -- so the Onboard CTA appears
+      // right after they've read it, whichever of the four options they picked.
+      narrative.play(`product_funnel_response_${value}`, {}, () => {
+        setShowOnboardCta(true)
+      })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -558,6 +719,18 @@ export default function GamePage() {
         previousTitle: previousTitleRef.current,
         newTitle: currentTitle,
       })
+      // The ONLY badge popup in Level 1 -- fires once, at the actual
+      // level 1 -> level 2 transition, not per-quest. A single fixed
+      // badge (no selection step) per your call: every other completion
+      // below now gets its own "completed" effect instead of a badge.
+      if (currentLevel === 2) {
+        queueBadge({
+          id: `title_level_${currentLevel}`,
+          title: 'Budget Boss',
+          subtitle: 'Always knows where the money goes.',
+          icon: '📊',
+        })
+      }
       // Narrator explains what this level MEANS for the story — separate
       // voice, separate beat, only ever shown once per player.
       storyNarrator.playOnce(`level_${currentLevel}_start`)
@@ -567,7 +740,7 @@ export default function GamePage() {
     }
     previousLevelRef.current = currentLevel
     previousTitleRef.current = currentTitle
-  }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin])
+  }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin, queueBadge])
 
   useEffect(() => {
     if (!levelUpInfo) return
@@ -604,9 +777,9 @@ export default function GamePage() {
         if (!targetId) return
 
         if (g.companionPhase !== 'done') {
-          storyNarrator.playRepeatable('companion_not_approaching', { avatarName: selectedAvatar?.name })
+          storyNarrator.playRepeatable('companion_not_approaching')
         } else {
-          narrative.play('quest_not_approaching', {
+          companionNudge.show('quest_not_approaching', {
             questLabel: g.questState.questLabels[g.activeQuestIdInChain] ?? g.activeQuestIdInChain,
           })
         }
@@ -666,15 +839,61 @@ export default function GamePage() {
   }, [profile?.email])
 
   // Only reached if the intro tour DID start above (a first-time player)
-  // — fires the story narrator the moment it finishes or gets skipped, so
+  // -- fires the story narrator the moment it finishes or gets skipped, so
   // the two overlays never show at once.
   const hasTriedStoryIntroRef = useRef(false)
+  const narratorWasEverActiveRef = useRef(false)
   useEffect(() => {
     if (!isGameReadyRef.current || introTour.isActive || hasTriedStoryIntroRef.current) return
     hasTriedStoryIntroRef.current = true
     storyNarrator.playOnce('intro')
     storyNarrator.playOnce('level_1_start')
   }, [introTour.isActive])
+
+  // Companion's proactive first greeting (checklist item #5) -- waits
+  // for the narrator's WHOLE queued onboarding sequence (intro +
+  // level_1_start) to actually finish, not just start, since both
+  // systems now render through the same bottom box and would otherwise
+  // try to show content out of order in the same tick. Fires once, ever,
+  // per player -- tracked with its own storage key rather than reusing
+  // the intro-tour or narrator "seen" flags, since this is genuinely a
+  // separate thing being shown for the first time.
+  useEffect(() => {
+    if (storyNarrator.isActive) {
+      narratorWasEverActiveRef.current = true
+      return
+    }
+    if (!narratorWasEverActiveRef.current || !hasTriedStoryIntroRef.current) return
+
+    let alreadyGreeted = false
+    try {
+      alreadyGreeted = localStorage.getItem(`sbi_questcraft_greeted_${sanitizedUser}`) === 'true'
+    } catch {
+      alreadyGreeted = false
+    }
+    if (alreadyGreeted) return
+
+    try {
+      localStorage.setItem(`sbi_questcraft_greeted_${sanitizedUser}`, 'true')
+    } catch {
+      // ignore storage errors
+    }
+    narrative.play('companion_first_greeting', { playerName: profile.name })
+    justFiredGreetingRef.current = true
+  }, [storyNarrator.isActive, sanitizedUser, narrative, profile.name])
+
+  // Once the greeting we just fired above actually finishes (not when
+  // ANY narrative beat finishes -- justFiredGreetingRef scopes this to
+  // specifically that one), point the notice board arrow at it so a
+  // first-time player's attention lands somewhere concrete right after
+  // being welcomed, instead of trailing off with nothing to do next.
+  const justFiredGreetingRef = useRef(false)
+  useEffect(() => {
+    if (narrative.isActive) return
+    if (!justFiredGreetingRef.current) return
+    justFiredGreetingRef.current = false
+    triggerNoticeBoardArrow()
+  }, [narrative.isActive, triggerNoticeBoardArrow])
 
   const totalCoins = useMemo(() => {
     return (profile.coins ?? 120) + (questState.coins || 0) + bonusCoins
@@ -885,59 +1104,63 @@ export default function GamePage() {
     { id: 'meera', name: 'Meera', portrait: npcPortrait3, greetingBeat: 'npc_greeting_meera', bodyUrl: AVATARS[2]?.url, fraction: 0.8 },
   ]), [])
 
-  // Extra margin beyond a building's own footprint to keep an NPC's body
-  // clear of its wall — the footprint itself comes from each building's
-  // actual scaled_width/scaled_depth below, not a flat guess.
-  const BUILDING_CLEARANCE_MARGIN = 2.5
+  // Minimum distance an NPC's spawn point must keep from any building's
+  // center. Bumped up from the first attempt at this fix (7 -> 12) --
+  // that version still let at least one NPC end up inside/behind a
+  // wall, so the margin was evidently too tight; being honest that I
+  // can't run the actual city generator from here to verify an exact
+  // number, so this needs a real in-game check after applying.
+  const BUILDING_CLEARANCE = 12
+
+  // How far (in road-list index terms) to search around each NPC's
+  // target fraction for the best available spot. Kept wide enough to
+  // find genuine open ground, narrow enough that the 3 NPCs still land
+  // in meaningfully different parts of the city rather than potentially
+  // converging on the exact same clear patch.
+  const SEARCH_WINDOW = 40
 
   const fixedStoryNpcPositions = useMemo(() => {
     if (!layout?.roads || layout.roads.length === 0) return {}
     const totalRoads = layout.roads.length
     const buildings = layout.buildings || []
 
-    // render_x/render_z is each building's CORNER, not its center — see
-    // the identical fix already applied to the capstone icon a few
-    // hundred lines down ("using the raw corner coordinate was
-    // offsetting the icon toward the building's edge instead of its
-    // middle"). The NPC-placement clearance check had the same bug: it
-    // measured distance from the corner with a flat 7-unit radius,
-    // which is both the wrong reference point AND ignores that large
-    // buildings (large-building.glb) have a much bigger real footprint
-    // than smaller ones — this is why NPCs kept spawning inside/behind
-    // walls even after the outward-search logic below was added.
-    const isClearOfBuildings = (x, z) =>
-      buildings.every((b) => {
-        const width = b.scaled_width || 10
-        const depth = b.scaled_depth || 10
-        const centerX = (b.render_x ?? 0) + width / 2
-        const centerZ = (b.render_z ?? 0) + depth / 2
-        const requiredClearance = Math.max(width, depth) / 2 + BUILDING_CLEARANCE_MARGIN
-        return Math.hypot(centerX - x, centerZ - z) >= requiredClearance
-      })
+    const clearanceAt = (x, z) => {
+      if (buildings.length === 0) return Infinity
+      return Math.min(...buildings.map((b) => Math.hypot((b.render_x ?? 0) - x, (b.render_z ?? 0) - z)))
+    }
 
     const positions = {}
     FIXED_STORY_NPCS.forEach((npc) => {
       const startIndex = Math.floor(npc.fraction * totalRoads) % totalRoads
 
-      // The fraction-picked road tile is a starting GUESS, not a
-      // guarantee — some road tiles sit close enough to a building's
-      // footprint to visually spawn an NPC inside/behind a wall (the
-      // originally reported bug). Search outward from that starting
-      // point for the nearest road tile that actually has clearance,
-      // rather than trusting the first pick blindly.
-      let chosen = null
-      for (let offset = 0; offset < totalRoads && !chosen; offset++) {
-        const candidateIndex = (startIndex + offset) % totalRoads
+      // Score every candidate in the search window and take the one
+      // with the BEST clearance found, rather than the first one that
+      // merely clears a fixed threshold. This matters because if
+      // consecutive array indices happen to sit in the same spatial
+      // cluster (roads are generated as h_tiles + v_tiles, not
+      // necessarily interleaved by location), a first-match search can
+      // stay stuck checking tiles that are all similarly close to the
+      // same building, never finding the genuinely open spot that
+      // might be one step further out.
+      let best = null
+      let bestClearance = -Infinity
+      const halfWindow = Math.floor(SEARCH_WINDOW / 2)
+      for (let offset = -halfWindow; offset <= halfWindow; offset++) {
+        const candidateIndex = ((startIndex + offset) % totalRoads + totalRoads) % totalRoads
         const candidate = layout.roads[candidateIndex]
         const x = candidate.render_x ?? 0
         const z = candidate.render_z ?? 0
-        if (isClearOfBuildings(x, z)) {
-          chosen = { x, z }
+        const clearance = clearanceAt(x, z)
+        if (clearance > bestClearance) {
+          bestClearance = clearance
+          best = { x, z }
         }
       }
 
+      let chosen = best
+
       // Fallback: every road tile failed the clearance check (a very
-      // dense layout) — better to place the NPC somewhere than nowhere,
+      // dense layout) -- better to place the NPC somewhere than nowhere,
       // even if it's imperfect; the original pick is still the most
       // reasonable single fallback available.
       if (!chosen) {
@@ -1027,29 +1250,128 @@ export default function GamePage() {
   // other direction so the two markers don't overlap. Shows on the map
   // like a treasure chest/quest marker, per the request that mini-games
   // be a real discoverable location, not a random popup.
-  const miniGameHubSpawn = useMemo(() => {
-    if (!layout?.roads || layout.roads.length === 0) return null
-    const centerX = (mapBounds.minX + mapBounds.maxX) / 2
-    const centerZ = (mapBounds.minZ + mapBounds.maxZ) / 2
+  // 3 distinct mini-game spawn points spread across the city (checklist
+  // item #4) -- replaces the old single shared hub, which sat right at
+  // the map center near spawn and bundled all 3 games behind one picker
+  // menu. Each spot now hosts exactly one specific game directly.
+  const MINIGAME_TYPES = useMemo(() => ([
+    { id: 'memory_match', label: 'Memory Match', icon: '\ud83e\udde0', fraction: 0.15 },
+    { id: 'pattern_sequence', label: 'Pattern Sequence', icon: '\ud83c\udfa8', fraction: 0.45 },
+    { id: 'quick_sort', label: 'Quick Sort', icon: '\u26a1', fraction: 0.75 },
+    { id: 'cash_flow_catch', label: 'Cash Flow Catch', icon: '\ud83d\udcb0', fraction: 0.60 },
+  ]), [])
 
-    const closestRoad = layout.roads.reduce((closest, road) => {
-      const d1 = Math.hypot((road.render_x ?? 0) - centerX, (road.render_z ?? 0) - centerZ)
-      const d2 = Math.hypot((closest.render_x ?? 0) - centerX, (closest.render_z ?? 0) - centerZ)
-      return d1 < d2 ? road : closest
+  const miniGameSpawns = useMemo(() => {
+    if (!layout?.roads || layout.roads.length === 0) return {}
+    const totalRoads = layout.roads.length
+    const buildings = layout.buildings || []
+    const npcPositions = Object.values(fixedStoryNpcPositions || {})
+
+    const clearanceAt = (x, z) => {
+      if (buildings.length === 0) return Infinity
+      return Math.min(...buildings.map((b) => Math.hypot((b.render_x ?? 0) - x, (b.render_z ?? 0) - z)))
+    }
+
+    // Minimum distance from any fixed NPC -- without this, a mini-game
+    // spot and an NPC could end up within each other's 7-unit reveal
+    // radius, causing both floating "[E] ..." labels to render on top
+    // of each other (the reported overlap bug). Both systems searched
+    // for clearance independently, with no awareness of each other.
+    const NPC_MIN_DISTANCE = 15
+    const tooCloseToNpc = (x, z) =>
+      npcPositions.some((pos) => Math.hypot(pos[0] - x, pos[2] - z) < NPC_MIN_DISTANCE)
+
+    // Minimum distance from any mini-game spot already placed this pass --
+    // without this, two spots can independently pick the same or an
+    // adjacent road tile (each only checked clearance from buildings/NPCs,
+    // never from each other), which is what caused two spot markers/
+    // interact prompts to overlap even after the "closest wins" fix.
+    // Bigger than the 3.5 interact radius + 7 reveal radius combined so
+    // spots can't even both be visible/interactable at once.
+    const MINIGAME_MIN_DISTANCE = 18
+    const placedSpawns = []
+    const tooCloseToOtherMinigame = (x, z) =>
+      placedSpawns.some((pos) => Math.hypot(pos[0] - x, pos[1] - z) < MINIGAME_MIN_DISTANCE)
+
+    const spawns = {}
+    MINIGAME_TYPES.forEach((game) => {
+      const startIndex = Math.floor(game.fraction * totalRoads) % totalRoads
+      let best = null
+      let bestClearance = -Infinity
+      // Fallback candidate ignoring NPC/other-minigame distance, used only
+      // if the whole search window fails those checks -- better to spawn
+      // slightly close than not spawn at all.
+      let fallbackBest = null
+      let fallbackClearance = -Infinity
+      const halfWindow = 20
+      for (let offset = -halfWindow; offset <= halfWindow; offset++) {
+        const candidateIndex = ((startIndex + offset) % totalRoads + totalRoads) % totalRoads
+        const candidate = layout.roads[candidateIndex]
+        const x = candidate.render_x ?? 0
+        const z = candidate.render_z ?? 0
+        const clearance = clearanceAt(x, z)
+        if (clearance > fallbackClearance) {
+          fallbackClearance = clearance
+          fallbackBest = { x, z }
+        }
+        if (tooCloseToNpc(x, z) || tooCloseToOtherMinigame(x, z)) continue
+        if (clearance > bestClearance) {
+          bestClearance = clearance
+          best = { x, z }
+        }
+      }
+      const chosen = best || fallbackBest
+      if (chosen) placedSpawns.push([chosen.x, chosen.z])
+      spawns[game.id] = chosen ? [chosen.x, ROAD_SURFACE_HEIGHT, chosen.z] : null
     })
+    return spawns
+  }, [layout, MINIGAME_TYPES, fixedStoryNpcPositions])
 
-    return [
-      (closestRoad.render_x ?? 0) - 2,
-      ROAD_SURFACE_HEIGHT,
-      (closestRoad.render_z ?? 0) - 2,
-    ]
-  }, [layout, mapBounds])
+  // Whichever of the 3 spots (if any) the player is currently standing
+  // near -- replaces the old single nearbyMiniGameHub boolean (renamed
+  // nearbyMiniGameSpot below) since
+  // there's now 3 independent spots to check instead of 1.
+  const nearbyMiniGameSpot = useMemo(() => {
+    if (!playerPos) return null
+    // Pick the CLOSEST spot within range, not just the first one in
+    // MINIGAME_TYPES order -- when two spawn points are both within the
+    // radius, array order used to win regardless of which marker the
+    // player was actually standing next to (the bug behind the label
+    // mismatch: "[E] Play Cash Flow Catch" on the marker vs "Press E —
+    // Play Pattern Sequence" on the bottom prompt).
+    let closestId = null
+    let closestDist = Infinity
+    for (const game of MINIGAME_TYPES) {
+      const pos = miniGameSpawns[game.id]
+      if (!pos) continue
+      const dist = Math.hypot(playerPos.x - pos[0], playerPos.z - pos[2])
+      if (dist < 3.5 && dist < closestDist) {
+        closestDist = dist
+        closestId = game.id
+      }
+    }
+    return closestId
+  }, [playerPos, miniGameSpawns, MINIGAME_TYPES])
 
-  const nearbyMiniGameHub = useMemo(() => {
-    if (!playerPos || !miniGameHubSpawn) return false
-    const dist = Math.hypot(playerPos.x - miniGameHubSpawn[0], playerPos.z - miniGameHubSpawn[2])
-    return dist < 3.5
-  }, [playerPos, miniGameHubSpawn])
+  // Single choke point for actually opening a mini-game -- both the KeyE
+  // handler and the mobile interact button call this instead of setting
+  // miniGameHubOpen directly, so the level-1 sequence gate only needs to
+  // live in one place. Pattern Sequence and Quick Sort are NOT part of
+  // the required level-1 chain, so they stay freely playable any time;
+  // only Memory Match and Cash Flow Catch specifically wait their turn.
+  const handleMiniGameSpotInteract = useCallback(() => {
+    if (!nearbyMiniGameSpot) return
+    if (level1NextRequiredStep && level1NextRequiredStep !== nearbyMiniGameSpot
+      && LEVEL_1_SEQUENCE.includes(nearbyMiniGameSpot)) {
+      narrative.play({
+        speaker: 'companion',
+        animation: null,
+        lines: [`Let's finish what's in front of us first -- ${LEVEL_1_SEQUENCE_LABELS[level1NextRequiredStep] || 'that'} first.`],
+      })
+      return
+    }
+    setMiniGameHubOpen(true)
+  }, [nearbyMiniGameSpot, level1NextRequiredStep, LEVEL_1_SEQUENCE, LEVEL_1_SEQUENCE_LABELS, narrative])
 
   // Proximity check for the companion while it's still lying on the road,
   // unrepaired — same pattern as nearbyTreasure/nearbyQuest.
@@ -1229,8 +1551,15 @@ export default function GamePage() {
     // quota (L1 needs 1, L2-L5 need 3) — coins come from that completion
     // (QUEST_REWARDS), not a separate bonus, so nothing gets double-counted.
     setLevelTaskProgress((prev) => {
+      // Level 1's 5 chain slots are the fixed companion/arjun/
+      // memory_match/cash_flow_catch/riya sequence now -- a wandering,
+      // unscripted NPC encounter isn't part of that and no longer
+      // consumes one of those slots. The bond/sound reward above still
+      // applies; it just doesn't move the Level 1 progress bar or grant
+      // chain coins.
+      if (currentLevel === 1) return prev
       if (prev.npcHelpCount >= NPC_HELP_QUOTA) return prev // quota already met
-      const slotIndex = currentLevel === 1 ? 1 : prev.npcHelpCount
+      const slotIndex = prev.npcHelpCount
       const chainId = getTaskChainId(slotIndex)
       if (chainId) questState.completeQuest(chainId)
       return { ...prev, npcHelpCount: prev.npcHelpCount + 1 }
@@ -1326,6 +1655,23 @@ export default function GamePage() {
   const handleCapstoneInteract = useCallback(async () => {
     if (activeQuiz || quizLoading) return
     if (capstoneChainId && questState.isLocked(capstoneChainId)) return // can't skip ahead to it
+    // Level 1's capstone additionally requires the FULL named sequence
+    // (not just the old generic quota) -- without this, the underlying
+    // quest-completion count could already reach 5 (and level up) from
+    // companion + Arjun alone + any one mini-game + recognition, since
+    // NPC_HELP_QUOTA/minigameDone only ever needed ONE of each type.
+    // The interaction-level redirects on Arjun/Riya/Memory Match/Cash
+    // Flow Catch stop the player visiting them out of order, but don't
+    // by themselves force Riya or Cash Flow Catch to happen at all --
+    // this is the actual hard requirement.
+    if (level1NextRequiredStep) {
+      narrative.play({
+        speaker: 'companion',
+        animation: null,
+        lines: [`Let's finish what's in front of us first -- ${LEVEL_1_SEQUENCE_LABELS[level1NextRequiredStep] || 'that'} first.`],
+      })
+      return
+    }
     const capstone = LEVEL_CAPSTONE_QUESTS[currentLevel]
     if (!capstone) return
 
@@ -1344,7 +1690,7 @@ export default function GamePage() {
     const normalized = normalizeQuizPayload(agentResponse, capstone.reward)
     setActiveQuiz(normalized || { ...capstone.fallbackQuiz, reward: capstone.reward, isFallback: true })
     setQuizLoading(false)
-  }, [activeQuiz, quizLoading, buildUserProfileForAgent, normalizeQuizPayload, questState.levelInfo, currentLevel])
+  }, [activeQuiz, quizLoading, buildUserProfileForAgent, normalizeQuizPayload, questState.levelInfo, currentLevel, level1NextRequiredStep, LEVEL_1_SEQUENCE_LABELS, narrative])
 
   const handleNpcInteract = useCallback(() => {
     if (!nearbyNpc || narrative.isActive || activeQuiz || quizLoading) return
@@ -1361,10 +1707,12 @@ export default function GamePage() {
       // Level 1 — a delayed recognition moment (rare, but possible) still
       // plays as flavor, it just won't map to a task slot outside L1.
       if (currentLevel === 1) {
+        // Slot 2 is now reserved for Memory Match in Level 1's fixed
+        // sequence -- this recognition moment used to double as the
+        // level's 3rd required slot, but it's flavor-only now and no
+        // longer completes a chain slot itself.
         setLevelTaskProgress((prev) => {
           if (prev.recognitionDone) return prev
-          const chainId = getTaskChainId(2)
-          if (chainId) questState.completeQuest(chainId)
           return { ...prev, recognitionDone: true }
         })
       }
@@ -1382,10 +1730,24 @@ export default function GamePage() {
   // have no written script to run.
   const handleFixedNpcInteract = useCallback(() => {
     if (!nearbyFixedNpc || narrative.isActive || activeQuiz || quizLoading || advisoryConversation.isActive) return
+    // Level 1's strict sequence -- if this NPC isn't the currently
+    // required step (e.g. player reaches Riya before finishing Arjun's
+    // required chain), gently redirect instead of opening the wrong
+    // conversation. Doesn't apply once the sequence is done (level1NextRequiredStep
+    // becomes null) or to any level other than 1.
+    if (level1NextRequiredStep && level1NextRequiredStep !== nearbyFixedNpc.id
+      && LEVEL_1_SEQUENCE.includes(nearbyFixedNpc.id)) {
+      narrative.play({
+        speaker: 'companion',
+        animation: null,
+        lines: [`Let's finish what's in front of us first -- ${LEVEL_1_SEQUENCE_LABELS[level1NextRequiredStep] || 'that'} first.`],
+      })
+      return
+    }
     narrative.play(nearbyFixedNpc.greetingBeat, {}, (choice) => {
       if (choice === 'help') advisoryConversation.start(nearbyFixedNpc.id)
     })
-  }, [nearbyFixedNpc, narrative, activeQuiz, quizLoading, advisoryConversation])
+  }, [nearbyFixedNpc, narrative, activeQuiz, quizLoading, advisoryConversation, level1NextRequiredStep, LEVEL_1_SEQUENCE, LEVEL_1_SEQUENCE_LABELS])
 
   // Applies the same reward weight as any other quest-equivalent NPC
   // help (completeAdvisorySuccess's old logic) once the player reaches
@@ -1403,52 +1765,70 @@ export default function GamePage() {
     addBond(BOND_REWARDS.quest)
     playSuccessSound()
     setLevelTaskProgress((prev) => {
-      if (prev.npcHelpCount >= NPC_HELP_QUOTA) return prev
-      const slotIndex = currentLevel === 1 ? 1 : prev.npcHelpCount
+      const npcId = advisoryConversation.npcId
+      // This exact NPC was already recorded as done earlier this level --
+      // don't let re-finishing them (or a stale re-fire of this effect)
+      // count a second time.
+      if ((prev.completedNpcIds || []).includes(npcId)) return prev
+      const nextCompletedIds = [...(prev.completedNpcIds || []), npcId]
+
+      if (currentLevel === 1) {
+        // Level 1's 5 chain slots are fixed to the explicit sequence
+        // (companion, arjun, memory_match, cash_flow_catch, riya) -- so
+        // Arjun and Riya each own their own slot instead of sharing a
+        // single "first NPC" slot the old quota logic used. This is what
+        // makes finishing Riya actually end the level: her slot (4) is
+        // the chain's last, so completing her tips completed.size to 5.
+        // Meera (or any other NPC) is bonus content here -- still marked
+        // done on the board via completedNpcIds, but no chain slot.
+        const LEVEL_1_NPC_SLOTS = { arjun: 1, riya: 4 }
+        const slotIndex = LEVEL_1_NPC_SLOTS[npcId]
+        if (slotIndex !== undefined) {
+          const chainId = getTaskChainId(slotIndex)
+          if (chainId) questState.completeQuest(chainId)
+        }
+        return { ...prev, completedNpcIds: nextCompletedIds }
+      }
+
+      if (prev.npcHelpCount >= NPC_HELP_QUOTA) {
+        // The quota's already been met by an earlier NPC -- this one
+        // still gets marked done on the notice board (that's the whole
+        // fix: completedNpcIds tracks THIS specific person, so their
+        // card can actually flip to done instead of the arrow looping
+        // back to them forever), it just doesn't advance the required
+        // chain slot or counter any further.
+        return { ...prev, completedNpcIds: nextCompletedIds }
+      }
+
+      const slotIndex = prev.npcHelpCount
       const chainId = getTaskChainId(slotIndex)
       if (chainId) questState.completeQuest(chainId)
-      return { ...prev, npcHelpCount: prev.npcHelpCount + 1 }
+      return { ...prev, npcHelpCount: prev.npcHelpCount + 1, completedNpcIds: nextCompletedIds }
     })
     setSystemNotice(`🤝 Helped ${advisoryConversation.npcName}!`)
 
-    // The full badge/share screen from the spec doesn't exist yet (see
-    // the standing to-do list). Once the NPC chat itself closes, the
-    // ROBOT COMPANION — not the NPC — asks a short, honest self-report
-    // question: does the player save money themselves? This is
-    // deliberately NOT a product pitch (no FD counter, no loan office
-    // mentioned here) — it's a signal-gathering step for the psychometric
-    // layer, feeding the SAME telemetry pipeline QuestQuizModal already
-    // writes to. The real product recommendation moment stays exactly
-    // where it already was: product_funnel_checkin, gated on the player
-    // having actually played enough levels for a recommendation to mean
-    // anything (see fireProductFunnelCheckin above).
-    setTimeout(() => {
-      narrative.play('savings_habit_checkin', {}, (savesValue) => {
-        emitTelemetry(profile?.email, {
-          type: 'savings_habit_selfreport',
-          payload: {
-            source_npc_id: advisoryConversation.npcId,
-            saves_money: savesValue === 'yes',
-          },
-        })
-        if (savesValue === 'yes') {
-          narrative.play('savings_habit_method', {}, (methodValue) => {
-            emitTelemetry(profile?.email, {
-              type: 'savings_habit_selfreport',
-              payload: {
-                source_npc_id: advisoryConversation.npcId,
-                saves_money: true,
-                savings_method: methodValue, // 'bank' | 'home'
-              },
-            })
-            narrative.play('savings_habit_close_yes')
-          })
-        } else {
-          narrative.play('savings_habit_close_no')
-        }
-      })
-    }, 600)
-  }, [advisoryConversation.phase, advisoryConversation.reachedFullResolution, advisoryConversation.npcName, advisoryConversation.npcId, addBond, playSuccessSound, currentLevel, getTaskChainId, questState, NPC_HELP_QUOTA, narrative, profile?.email])
+    // "Completed" effect instead of a badge popup -- the same checkpoint
+    // banner + 3D particle burst every other completion gets (mini-game,
+    // capstone), anchored on the player since there's no building tied
+    // to an NPC conversation. Level 1's only badge is the level 1 -> 2
+    // transition badge (see the level-up effect below) -- every other
+    // completion, including this one, is celebrated but doesn't queue
+    // its own badge popup.
+    setActiveEffect({
+      position: playerPos ? [playerPos.x, 0, playerPos.z] : [0, 0, 0],
+      label: `Helped ${advisoryConversation.npcName}`,
+    })
+
+    // The funnel line still fires as a companion beat once the
+    // conversation closes and the badge above has been queued, so the
+    // written funnel content plays out right after the celebratory moment
+    // rather than competing with it.
+    if (advisoryConversation.funnelLine) {
+      setTimeout(() => {
+        narrative.play({ speaker: 'companion', animation: 'yes', lines: [advisoryConversation.funnelLine] })
+      }, 600)
+    }
+  }, [advisoryConversation.phase, advisoryConversation.reachedFullResolution, advisoryConversation.npcId, advisoryConversation.npcName, advisoryConversation.funnelLine, addBond, playSuccessSound, currentLevel, getTaskChainId, questState, NPC_HELP_QUOTA, narrative, playerPos])
 
   const handleUseHint = useCallback(async (questionText) => {
     if (hintScrolls <= 0) return null
@@ -1503,8 +1883,8 @@ export default function GamePage() {
         handleCapstoneInteract()
       } else if (e.code === 'KeyE' && nearbyCompanionToRepair && companionPhase === 'placed') {
         setCompanionPhase('repairing')
-      } else if (e.code === 'KeyE' && nearbyMiniGameHub && !miniGameHubOpen) {
-        setMiniGameHubOpen(true)
+      } else if (e.code === 'KeyE' && nearbyMiniGameSpot && !miniGameHubOpen) {
+        handleMiniGameSpotInteract()
       } else if (e.code === 'KeyE' && nearbyFixedNpc && !narrative.isActive) {
         handleFixedNpcInteract()
       } else if (e.code === 'KeyE' && nearbyNpc && !narrative.isActive) {
@@ -1524,7 +1904,7 @@ export default function GamePage() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [effectiveNearbyQuest, activeQuiz, drawerOpen, mobileTrackerOpen, handleCapstoneInteract, nearbyCompanionToRepair, companionPhase, nearbyMiniGameHub, miniGameHubOpen, nearbyFixedNpc, handleFixedNpcInteract, nearbyNpc, handleNpcInteract])
+  }, [effectiveNearbyQuest, activeQuiz, drawerOpen, mobileTrackerOpen, handleCapstoneInteract, nearbyCompanionToRepair, companionPhase, nearbyMiniGameSpot, miniGameHubOpen, nearbyFixedNpc, handleFixedNpcInteract, nearbyNpc, handleNpcInteract, handleMiniGameSpotInteract])
 
   const models = getDiscoveredModels()
 
@@ -1615,9 +1995,9 @@ export default function GamePage() {
         if (currentDistance < NEAR_DISTANCE && hasShownGettingCloseForTargetRef.current !== targetId) {
           hasShownGettingCloseForTargetRef.current = targetId
           if (companionPhase !== 'done') {
-            storyNarrator.playRepeatable('companion_getting_close', { avatarName: selectedAvatar?.name })
+            storyNarrator.playRepeatable('companion_getting_close')
           } else {
-            narrative.play('quest_getting_close', {
+            companionNudge.show('quest_getting_close', {
               questLabel: questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain,
             })
           }
@@ -1628,9 +2008,9 @@ export default function GamePage() {
         if (notApproachingStreakRef.current >= NOT_APPROACHING_THRESHOLD) {
           notApproachingStreakRef.current = 0 // re-arm for another ~30s of no progress, not immediate repeat
           if (companionPhase !== 'done') {
-            storyNarrator.playRepeatable('companion_not_approaching', { avatarName: selectedAvatar?.name })
+            storyNarrator.playRepeatable('companion_not_approaching')
           } else {
-            narrative.play('quest_not_approaching', {
+            companionNudge.show('quest_not_approaching', {
               questLabel: questState.questLabels[activeQuestIdInChain] ?? activeQuestIdInChain,
             })
           }
@@ -1754,55 +2134,64 @@ export default function GamePage() {
   // toward the progress bar than a quick mini-game or a single neighbor
   // chat, even though they're all "one task" each.
   const TASK_WEIGHTS = { companion: 2, npcHelp: 1, recognition: 1, minigame: 1, capstone: 3 }
+  // Level 1's exact required weighting (per explicit request), summing to
+  // 100 across the 5 real steps -- companion / Arjun / Memory Match /
+  // Cash Flow Catch / Riya. Everything else visible in Level 1 (Meera,
+  // Vikram, Aahan, recognition, the capstone) is bonus content and
+  // intentionally contributes 0 toward this total.
+  const LEVEL_1_WEIGHTS = { companion: 10, arjun: 30, memory_match: 15, cash_flow_catch: 15, riya: 30 }
 
   const noticeBoardItems = []
-  // Named per your confirmed mapping — npc_1 is Arjun, npc_2 is Riya,
-  // npc_3 is reserved for a character you haven't named yet. The `flow`
-  // lines hint at each one's real situation without spelling out the
-  // full 5-stage quest content (that's still Phase 3, not built yet) —
-  // this only changes what the board SHOWS, not how the encounter plays.
-  // First-person, direct asks — each written distinctly enough to give
-  // the handwriting styling below something real to work with (not the
-  // full 5-stage story, just the "notice board request" framing).
+  // All 5 written NPCs (see advisoryScripts.js) now get a card, each
+  // showing the ACTUAL problem they have -- these `flow` lines are the
+  // real `dilemmaLine` from their advisory script, not a shortened
+  // paraphrase, so what the board promises matches what the
+  // conversation actually opens with.
+  //
+  // Arjun/Riya/Meera are wired into the walkable city as
+  // FIXED_STORY_NPCS (real pin positions below); Vikram/Aahan don't
+  // have a placed character yet, so their cards render without a
+  // "Pin on map" button until that's done -- same honest-limitation
+  // pattern as before, just now covering 2 cards instead of 0.
   const npcCharacters = [
-    { name: 'Arjun', image: npcPortrait1, flow: "Hey — I need help. Salary just came in and I don't know what to do with it before it's gone.", hand: 'nb-hand-1' },
-    { name: 'Riya', image: npcPortrait2, flow: "Can you help me out? I got some gift money and I keep going back and forth on what to do with it.", hand: 'nb-hand-2' },
-    { name: 'Meera', image: npcPortrait3, flow: "This month's actually been great — way more orders than usual. But there's a call to make.", hand: 'nb-hand-3' },
+    { id: 'arjun', name: 'Arjun', image: npcPortrait1, flow: "Salary just came in. First month I've actually got enough to think past just getting by. My friend's group trip booking closes today -- need to decide fast.", hand: 'nb-hand-1' },
+    { id: 'riya', name: 'Riya', image: npcPortrait2, flow: "Just got ₹2,000 as a surprise gift. The sneakers I've been stalking for months just went on a 3-hour flash sale...", hand: 'nb-hand-2' },
+    { id: 'meera', name: 'Meera', image: npcPortrait3, flow: "This month's actually been great, way more orders than usual. A supplier's offering bulk materials at a discount -- only today.", hand: 'nb-hand-3' },
+    { id: 'vikram', name: 'Vikram', image: npcPortrait4, flow: "Got a bonus of ₹10,000, but my credit card bill is due, my gym membership auto-renewed, and my friends are planning a lavish weekend getaway.", hand: 'nb-hand-4' },
+    { id: 'aahan', name: 'Aahan', image: npcPortrait5, flow: "Big crossroads. I've saved up ₹1.5 Lakhs. Do I dump it into a high-risk crypto trend, split it with an index fund, or park it safely in a liquid debt fund?", hand: 'nb-hand-5' },
   ]
-  if (currentLevel === 1) {
-    noticeBoardItems.push({
-      id: 'companion',
-      icon: '🔒',
-      title: 'Unlock Your Companion',
-      flow: "Find your companion out in the city and figure out how to unlock it.",
-      done: companionPhase === 'done',
-      weight: TASK_WEIGHTS.companion,
-      pinPosition: companionSpawn ? { x: companionSpawn[0], z: companionSpawn[2] } : null,
-    })
-  }
   // Shows ALL characters as available options, not just however many the
   // quota strictly requires — "here's who you could help," matching the
   // no-strict-task-list direction. The actual coin/level completion
   // requirement (NPC_HELP_QUOTA) is unchanged underneath; this only
-  // changes what the board displays. Since the real encounter system is
-  // still anonymous (any nearby wandering NPC, not a specific chosen
-  // one), "done" reflects how many encounters you've completed overall,
-  // not literally "you helped this exact person" — an honest limitation
-  // until NPCs are wired to fixed quest points.
+  // changes what the board displays.
   npcCharacters.forEach((character, i) => {
+    // These 3 NPCs are no longer anonymous wandering encounters -- they're
+    // FIXED_STORY_NPCS with real, stable world positions (see
+    // fixedStoryNpcPositions above), so they can now get real map pins
+    // in sequence like any other objective, instead of the null this
+    // used to be back when the encounter was "any nearby wandering NPC."
+    const fixedPos = fixedStoryNpcPositions[FIXED_STORY_NPCS[i]?.id]
     noticeBoardItems.push({
       id: `npc-help-${i}`,
       image: character.image,
       title: character.name,
       flow: character.flow,
       handClass: character.hand,
-      done: levelTaskProgress.npcHelpCount > i,
+      // Keyed to THIS specific NPC's id, not a shared counter -- fixes
+      // the arrow looping back to Riya forever once Arjun alone had
+      // already satisfied the level's quota (see completedNpcIds in
+      // levelTaskStorage.js for the full story). Now finishing Riya's
+      // own conversation is what marks Riya's own card done, full stop.
+      done: (levelTaskProgress.completedNpcIds || []).includes(character.id),
       // Only the first NPC_HELP_QUOTA cards count toward the progress
       // bar's total — the rest are genuinely optional extras, visible as
       // real choices but not required to hit 100%, matching "options,
       // not a strict list."
-      weight: i < NPC_HELP_QUOTA ? TASK_WEIGHTS.npcHelp : 0,
-      pinPosition: null, // wandering NPCs have no fixed spot to pin
+      weight: currentLevel === 1
+        ? (LEVEL_1_WEIGHTS[character.id] || 0)
+        : (i < NPC_HELP_QUOTA ? TASK_WEIGHTS.npcHelp : 0),
+      pinPosition: fixedPos ? { x: fixedPos[0], z: fixedPos[2] } : null,
     })
   })
   if (currentLevel === 1) {
@@ -1812,19 +2201,53 @@ export default function GamePage() {
       title: "Earn the City's Recognition",
       flow: 'Keep helping people — eventually, someone will recognize you.',
       done: levelTaskProgress.recognitionDone,
-      weight: TASK_WEIGHTS.recognition,
+      // Bonus flavor only in Level 1's fixed sequence -- doesn't count
+      // toward the required 100% (see LEVEL_1_WEIGHTS above).
+      weight: 0,
       pinPosition: null,
     })
   }
-  noticeBoardItems.push({
-    id: 'minigame',
-    icon: '🎮',
-    title: 'Clear a Mini-Game',
-    flow: 'Head to the mini-game hub and beat one challenge.',
-    done: levelTaskProgress.minigameDone,
-    weight: TASK_WEIGHTS.minigame,
-    pinPosition: miniGameHubSpawn ? { x: miniGameHubSpawn[0], z: miniGameHubSpawn[2] } : null,
-  })
+  if (currentLevel === 1) {
+    // Level 1's fixed sequence calls out Memory Match and Cash Flow Catch
+    // as their own cards, each worth its own slice of the 100%, instead
+    // of one generic "beat any mini-game" card.
+    const memoryMatchSpawn = miniGameSpawns['memory_match']
+    const cashFlowCatchSpawn = miniGameSpawns['cash_flow_catch']
+    noticeBoardItems.push({
+      id: 'minigame-memory-match',
+      icon: '🎮',
+      title: 'Memory Match',
+      flow: 'Clear the Memory Match mini-game spot in the city.',
+      done: (levelTaskProgress.completedMinigameIds || []).includes('memory_match'),
+      weight: LEVEL_1_WEIGHTS.memory_match,
+      pinPosition: memoryMatchSpawn ? { x: memoryMatchSpawn[0], z: memoryMatchSpawn[2] } : null,
+    })
+    noticeBoardItems.push({
+      id: 'minigame-cash-flow-catch',
+      icon: '🎮',
+      title: 'Cash Flow Catch',
+      flow: 'Clear the Cash Flow Catch mini-game spot in the city.',
+      done: (levelTaskProgress.completedMinigameIds || []).includes('cash_flow_catch'),
+      weight: LEVEL_1_WEIGHTS.cash_flow_catch,
+      pinPosition: cashFlowCatchSpawn ? { x: cashFlowCatchSpawn[0], z: cashFlowCatchSpawn[2] } : null,
+    })
+  } else {
+    noticeBoardItems.push({
+      id: 'minigame',
+      icon: '🎮',
+      title: 'Clear a Mini-Game',
+      flow: 'Any of the 3 mini-game spots around the city -- beat one challenge.',
+      done: levelTaskProgress.minigameDone,
+      weight: TASK_WEIGHTS.minigame,
+      // Points at the first of the 3 spread-out spots as a reasonable
+      // default pin -- the task itself doesn't care which specific game
+      // gets cleared, so this is just "somewhere to start," not a
+      // requirement to visit this exact one.
+      pinPosition: miniGameSpawns[MINIGAME_TYPES[0]?.id]
+        ? { x: miniGameSpawns[MINIGAME_TYPES[0].id][0], z: miniGameSpawns[MINIGAME_TYPES[0].id][2] }
+        : null,
+    })
+  }
   const capstoneBuildingForPin = capstoneChainId ? questState.questBuildings[capstoneChainId] : null
   noticeBoardItems.push({
     id: 'capstone',
@@ -1832,7 +2255,9 @@ export default function GamePage() {
     title: LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || 'Capstone Mission',
     flow: "The city's biggest ask this level — save it for when you're ready.",
     done: levelTaskProgress.capstoneDone,
-    weight: TASK_WEIGHTS.capstone,
+    // Bonus content in Level 1 -- doesn't count toward the required 100%
+    // (see LEVEL_1_WEIGHTS above); unchanged for every other level.
+    weight: currentLevel === 1 ? 0 : TASK_WEIGHTS.capstone,
     pinPosition: capstoneBuildingForPin?.render_x !== undefined
       ? { x: capstoneBuildingForPin.render_x, z: capstoneBuildingForPin.render_z }
       : null,
@@ -1840,9 +2265,20 @@ export default function GamePage() {
 
   const noticeBoardWeightDone = noticeBoardItems.reduce((sum, n) => sum + (n.done ? n.weight : 0), 0)
   const noticeBoardWeightTotal = noticeBoardItems.reduce((sum, n) => sum + n.weight, 0)
-  const noticeBoardProgressPct = noticeBoardWeightTotal > 0
-    ? Math.round((noticeBoardWeightDone / noticeBoardWeightTotal) * 100)
-    : 0
+  // Level 1 uses its own exact 10/30/15/15/30 formula rather than the
+  // generic card-weight reduce above -- companion has no visible notice
+  // board card (it's finished before the board is ever really used), so
+  // it has to be folded in explicitly for the bar to reach a true 100%
+  // right when Riya (the last step) completes.
+  const noticeBoardProgressPct = currentLevel === 1
+    ? Math.round(
+        (companionPhase === 'done' ? LEVEL_1_WEIGHTS.companion : 0)
+          + ((levelTaskProgress.completedNpcIds || []).includes('arjun') ? LEVEL_1_WEIGHTS.arjun : 0)
+          + ((levelTaskProgress.completedMinigameIds || []).includes('memory_match') ? LEVEL_1_WEIGHTS.memory_match : 0)
+          + ((levelTaskProgress.completedMinigameIds || []).includes('cash_flow_catch') ? LEVEL_1_WEIGHTS.cash_flow_catch : 0)
+          + ((levelTaskProgress.completedNpcIds || []).includes('riya') ? LEVEL_1_WEIGHTS.riya : 0)
+      )
+    : (noticeBoardWeightTotal > 0 ? Math.round((noticeBoardWeightDone / noticeBoardWeightTotal) * 100) : 0)
 
   // The pin only means something while that task still has an actual
   // fixed spot AND isn't already done — auto-clears itself in either
@@ -1858,9 +2294,40 @@ export default function GamePage() {
     .filter((n) => n.pinPosition)
     .map((n, i) => ({ ...n, order: i + 1 }))
 
-  // Where the arrows point: an explicitly pinned task wins, otherwise the
+  // Level 1's strict sequence needs its OWN arrow target -- the generic
+  // fallback below just finds the first undone item in a fixed array
+  // order (companion, then each NPC by array position, then minigame),
+  // which has no idea Memory Match/Cash Flow Catch need to happen before
+  // Riya. Without this override, the arrows pointed at Riya the moment
+  // Arjun was done, even though the companion was correctly telling the
+  // player to go do Memory Match first -- exactly the reported bug.
+  // Built directly from the raw spawn positions rather than routing
+  // through noticeBoardItems, since the mini-games don't have distinct
+  // per-game notice-board entries (just one generic "minigame" card).
+  const level1SequenceTarget = (() => {
+    if (!level1NextRequiredStep) return null
+    const posLookup = {
+      companion: companionSpawn,
+      arjun: fixedStoryNpcPositions['arjun'],
+      memory_match: miniGameSpawns['memory_match'],
+      cash_flow_catch: miniGameSpawns['cash_flow_catch'],
+      riya: fixedStoryNpcPositions['riya'],
+    }
+    const pos = posLookup[level1NextRequiredStep]
+    if (!pos) return null
+    return {
+      id: `level1_sequence_${level1NextRequiredStep}`,
+      pinPosition: { x: pos[0], z: pos[2] },
+      done: false,
+    }
+  })()
+
+  // Where the arrows point: the level-1 sequence target wins outright
+  // (pointing anywhere else would contradict what the companion is
+  // telling the player), then an explicitly pinned task, then the
   // next unfinished objective in sequence.
   const currentObjective =
+    level1SequenceTarget ||
     (pinnedNotice && !pinnedNotice.done && pinnedNotice.pinPosition
       ? orderedObjectives.find((n) => n.id === pinnedNotice.id)
       : null) || orderedObjectives.find((n) => !n.done) || null
@@ -2023,27 +2490,31 @@ export default function GamePage() {
         )
       })}
 
-      {miniGameHubSpawn && (
-        <g>
-          <circle
-            cx={toMinimapX(miniGameHubSpawn[0])}
-            cy={toMinimapZ(miniGameHubSpawn[2])}
-            r="4"
-            fill="#22d3ee"
-            stroke="#ffffff"
-            strokeWidth="1.5"
-          />
-          <text
-            x={toMinimapX(miniGameHubSpawn[0])}
-            y={toMinimapZ(miniGameHubSpawn[2])}
-            fontSize="5"
-            textAnchor="middle"
-            dominantBaseline="central"
-          >
-            🎮
-          </text>
-        </g>
-      )}
+      {MINIGAME_TYPES.map((game) => {
+        const pos = miniGameSpawns[game.id]
+        if (!pos) return null
+        return (
+          <g key={game.id}>
+            <circle
+              cx={toMinimapX(pos[0])}
+              cy={toMinimapZ(pos[2])}
+              r="4"
+              fill="#22d3ee"
+              stroke="#ffffff"
+              strokeWidth="1.5"
+            />
+            <text
+              x={toMinimapX(pos[0])}
+              y={toMinimapZ(pos[2])}
+              fontSize="5"
+              textAnchor="middle"
+              dominantBaseline="central"
+            >
+              {game.icon}
+            </text>
+          </g>
+        )
+      })}
 
       {/* Player-pinned objective — a distinct marker + connecting line
           from wherever the player currently is, so "where do I go next"
@@ -2135,7 +2606,9 @@ export default function GamePage() {
 
   return (
     <div className="game">
-      {(!layout || !minLoadingTimeElapsed) && <LoadingScreen />}
+      {!hasEnteredGame && (
+        <LoadingScreen isReady={assetsReady} onEnter={() => setHasEnteredGame(true)} />
+      )}
 
       <div className="rotate-overlay">
         <div className="rotate-overlay-icon">📱</div>
@@ -2197,6 +2670,7 @@ export default function GamePage() {
 
       <CompanionDialogueModal
         narrative={narrative}
+        narrator={storyNarrator}
         companionName={companionNameInput || savedProfile?.companionName || selectedCompanionData?.name}
         playerName={profile.name}
       />
@@ -2204,10 +2678,31 @@ export default function GamePage() {
       <AdvisoryConversationModal
         conversation={advisoryConversation}
         npcPortrait={FIXED_STORY_NPCS.find((n) => n.id === advisoryConversation.npcId)?.portrait}
-        playerPortrait={selectedAvatar?.url}
       />
 
-      <StoryNarratorOverlay narrator={storyNarrator} />
+      {activeBadge && (
+        <BadgeModal
+          badge={activeBadge}
+          defaultName={profile.name}
+          onClose={closeBadge}
+          onPublished={handleBadgePublished}
+        />
+      )}
+
+      {showOnboardCta && (
+        <div className="onboard-cta-dock">
+          <button className="onboard-cta-btn" onClick={handleOnboardClick}>
+            Continue to Onboarding →
+          </button>
+          <button
+            className="onboard-cta-dismiss"
+            onClick={() => setShowOnboardCta(false)}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <IntroTourOverlay tour={introTour} />
 
@@ -2389,6 +2884,7 @@ export default function GamePage() {
               clipKey={companionPhase === 'placed' || companionPhase === 'repairing' ? 'death' : 'wave'}
               isFollowing={companionPhase === 'done'}
               followTarget={playerPos}
+              nudgeText={companionNudge.isVisible ? companionNudge.currentLine : null}
             />
           )}
 
@@ -2431,19 +2927,24 @@ export default function GamePage() {
               )
             })}
 
-          {miniGameHubSpawn && !miniGameHubOpen && (
-            <FloatingGenieIcon
-              position={[miniGameHubSpawn[0], 2, miniGameHubSpawn[2]]}
-              playerPosition={playerPos}
-              onTriggerInteract={() => setMiniGameHubOpen(true)}
-              label="Play Mini-Games"
-              icon="🎮"
-              activeColor="#22d3ee"
-              activeGlow="#67e8f9"
-              revealDistance={7}
-              disabled={!!activeQuiz || nearbyCompanionToRepair || !!effectiveNearbyQuest || anyPanelOpen}
-            />
-          )}
+          {MINIGAME_TYPES.map((game) => {
+            const pos = miniGameSpawns[game.id]
+            if (!pos || miniGameHubOpen) return null
+            return (
+              <FloatingGenieIcon
+                key={game.id}
+                position={[pos[0], 2, pos[2]]}
+                playerPosition={playerPos}
+                onTriggerInteract={handleMiniGameSpotInteract}
+                label={`Play ${game.label}`}
+                icon={game.icon}
+                activeColor="#22d3ee"
+                activeGlow="#67e8f9"
+                revealDistance={7}
+                disabled={!!activeQuiz || nearbyCompanionToRepair || !!effectiveNearbyQuest || anyPanelOpen}
+              />
+            )
+          })}
         </Suspense>
 
         <Ground bounds={mapBounds} />
@@ -2632,6 +3133,7 @@ export default function GamePage() {
             progressPct={noticeBoardProgressPct}
             pinnedTaskId={pinnedTaskId}
             onPin={(id) => setPinnedTaskId((current) => (current === id ? null : id))}
+            showArrow={showNoticeBoardArrow}
           />
 
         </div>
@@ -2654,19 +3156,19 @@ export default function GamePage() {
           </div>
         )}
 
-        {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && nearbyMiniGameHub && !miniGameHubOpen && (
+        {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && nearbyMiniGameSpot && !miniGameHubOpen && (
           <div className="interaction-toast interaction-toast--keyhint">
-            Press <b>E</b> — Play Mini-Games
+            Press <b>E</b> — Play {MINIGAME_TYPES.find((g) => g.id === nearbyMiniGameSpot)?.label || 'Mini-Game'}
           </div>
         )}
 
-        {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && !nearbyMiniGameHub && nearbyFixedNpc && !narrative.isActive && (
+        {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && !nearbyMiniGameSpot && nearbyFixedNpc && !narrative.isActive && (
           <div className="interaction-toast interaction-toast--keyhint">
             Press <b>E</b> — Talk to {nearbyFixedNpc.name}
           </div>
         )}
 
-        {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && !nearbyMiniGameHub && !nearbyFixedNpc && nearbyNpc && !narrative.isActive && (
+        {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && !nearbyMiniGameSpot && !nearbyFixedNpc && nearbyNpc && !narrative.isActive && (
           <div className="interaction-toast interaction-toast--keyhint">
             Press <b>E</b> — Help {nearbyNpc.name}
           </div>
@@ -2722,7 +3224,7 @@ export default function GamePage() {
 
                 if (!hasShownFirstQuestOutcomeRef.current) {
                   hasShownFirstQuestOutcomeRef.current = true
-                  narrative.play('quest_success')
+                  companionNudge.show('quest_success')
                 }
                 // Note: NPC-advisory encounters never reach this modal at
                 // all anymore — completeAdvisorySuccess (above, near
@@ -2735,10 +3237,25 @@ export default function GamePage() {
 
                 setLevelTaskProgress((prev) => {
                   if (prev.capstoneDone) return prev
-                  const chainId = getTaskChainId(4)
-                  if (chainId) questState.completeQuest(chainId)
+                  // Slot 4 belongs to Riya in Level 1's fixed sequence now
+                  // -- Municipality Office stays playable as bonus content
+                  // (still worth its own bond/coin reward above) but no
+                  // longer double-books that slot. Note this building is
+                  // also gated behind level1NextRequiredStep being null
+                  // (see handleCapstoneInteract), so in practice it only
+                  // becomes reachable once Riya -- and therefore Level 1
+                  // itself -- is already done.
+                  if (currentLevel !== 1) {
+                    const chainId = getTaskChainId(4)
+                    if (chainId) questState.completeQuest(chainId)
+                  }
                   return { ...prev, capstoneDone: true }
                 })
+
+                // Completed effect only -- no badge popup here anymore.
+                // The single Level 1 badge fires at the actual level
+                // 1 -> 2 transition (see the level-up effect), not at
+                // capstone completion itself.
 
                 // Reuses the same checkpoint banner + 3D particle burst as a
                 // regular quest completion (below), anchored on the player
@@ -2757,7 +3274,7 @@ export default function GamePage() {
             onFail={() => {
               if (activeQuestId && !hasShownFirstQuestOutcomeRef.current) {
                 hasShownFirstQuestOutcomeRef.current = true
-                narrative.play('quest_fail')
+                companionNudge.show('quest_fail')
               }
               setActiveQuiz(null)
               setActiveQuestId(null)
@@ -2810,12 +3327,12 @@ export default function GamePage() {
         )}
 
         <MobileControls
-          showInteract={(!!effectiveNearbyQuest || !!nearbyTreasure || nearbyCompanionToRepair || (nearbyMiniGameHub && !miniGameHubOpen) || (!!nearbyFixedNpc && !narrative.isActive) || (!!nearbyNpc && !narrative.isActive)) && !activeQuiz && !anyPanelOpen}
+          showInteract={(!!effectiveNearbyQuest || !!nearbyTreasure || nearbyCompanionToRepair || (!!nearbyMiniGameSpot && !miniGameHubOpen) || (!!nearbyFixedNpc && !narrative.isActive) || (!!nearbyNpc && !narrative.isActive)) && !activeQuiz && !anyPanelOpen}
           interactLabel={
             (effectiveNearbyQuest ? (LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || effectiveNearbyQuest.label) : '') ||
             (nearbyTreasure ? 'Open Treasure Chest' : '') ||
             (nearbyCompanionToRepair ? 'Unlock Companion' : '') ||
-            (nearbyMiniGameHub ? 'Play Mini-Games' : '') ||
+            (nearbyMiniGameSpot ? `Play ${MINIGAME_TYPES.find((g) => g.id === nearbyMiniGameSpot)?.label || 'Mini-Game'}` : '') ||
             (nearbyFixedNpc ? `Talk to ${nearbyFixedNpc.name}` : '') ||
             (nearbyNpc ? `Help ${nearbyNpc.name}` : '')
           }
@@ -2827,8 +3344,8 @@ export default function GamePage() {
               handleOpenTreasure(nearbyTreasure)
             } else if (nearbyCompanionToRepair) {
               setCompanionPhase('repairing')
-            } else if (nearbyMiniGameHub) {
-              setMiniGameHubOpen(true)
+            } else if (nearbyMiniGameSpot) {
+              handleMiniGameSpotInteract()
             } else if (nearbyFixedNpc) {
               handleFixedNpcInteract()
             } else if (nearbyNpc) {
@@ -2840,6 +3357,7 @@ export default function GamePage() {
         {miniGameHubOpen && (
           <MiniGameHub
             sanitizedUser={sanitizedUser}
+            forcedGameId={nearbyMiniGameSpot}
             onExit={() => setMiniGameHubOpen(false)}
             onReward={(gameId, result) => {
               setBonusCoins((prev) => prev + 10)
@@ -2857,11 +3375,40 @@ export default function GamePage() {
               // this LEVEL's "play a mini-game" task slot, once per level,
               // with its own separate (larger) QUEST_REWARDS bonus on top.
               setLevelTaskProgress((prev) => {
-                if (prev.minigameDone) return prev
+                // Tracks THIS specific game as done regardless of whether
+                // the overall "minigameDone" slot was already satisfied
+                // by an earlier game -- needed so level1NextRequiredStep
+                // can tell Memory Match and Cash Flow Catch apart instead
+                // of one generic "played a minigame" flag.
+                const alreadyCounted = (prev.completedMinigameIds || []).includes(gameId)
+                const nextCompletedMinigameIds = alreadyCounted
+                  ? (prev.completedMinigameIds || [])
+                  : [...(prev.completedMinigameIds || []), gameId]
+
+                if (currentLevel === 1) {
+                  // Level 1's fixed sequence gives Memory Match and Cash
+                  // Flow Catch their OWN chain slots (2 and 3) instead of
+                  // sharing one "any minigame" slot -- each fires its own
+                  // slot only the first time THAT specific game is won.
+                  const LEVEL_1_MINIGAME_SLOTS = { memory_match: 2, cash_flow_catch: 3 }
+                  const slotIndex = LEVEL_1_MINIGAME_SLOTS[gameId]
+                  if (!alreadyCounted && slotIndex !== undefined) {
+                    const chainId = getTaskChainId(slotIndex)
+                    if (chainId) questState.completeQuest(chainId)
+                  }
+                  const bothDone = nextCompletedMinigameIds.includes('memory_match')
+                    && nextCompletedMinigameIds.includes('cash_flow_catch')
+                  return { ...prev, minigameDone: bothDone, completedMinigameIds: nextCompletedMinigameIds }
+                }
+
+                if (prev.minigameDone) return { ...prev, completedMinigameIds: nextCompletedMinigameIds }
                 const chainId = getTaskChainId(3)
                 if (chainId) questState.completeQuest(chainId)
-                return { ...prev, minigameDone: true }
+                return { ...prev, minigameDone: true, completedMinigameIds: nextCompletedMinigameIds }
               })
+              // Completed effect only (checkpoint banner above) -- no
+              // badge popup here. Level 1's only badge is the level 1 -> 2
+              // transition badge.
             }}
           />
         )}

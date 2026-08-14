@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from openai import OpenAI
 
 # Import your city builder module
@@ -289,8 +290,21 @@ def complete_quest(email: str, payload: schemas.CompleteQuestRequest, db: Sessio
             reference_id=payload.quest_id,
             balance_after=player.stats.coins,
         ))
-        db.commit()
-        db.refresh(player)
+        try:
+            db.commit()
+            db.refresh(player)
+        except IntegrityError:
+            # Two completion requests for the same quest landed close
+            # enough together that both passed the already_done check
+            # above before either committed -- the DB's own unique
+            # constraint (uq_player_quest) is what actually caught the
+            # duplicate. That's it working as intended, not a failure:
+            # roll back this request's half-applied insert/coin-add and
+            # just return the player's current (already-correct) state,
+            # instead of crashing with a 500 on a request that's really
+            # asking for something that already happened.
+            db.rollback()
+            db.refresh(player)
 
     return _player_state_response(player)
 
@@ -324,8 +338,17 @@ def collect_treasure(email: str, payload: schemas.CollectTreasureRequest, db: Se
             player.stats.streak_freezers += 1
         elif payload.reward_type == "hint_scroll":
             player.stats.hint_scrolls += 1
-        db.commit()
-        db.refresh(player)
+        try:
+            db.commit()
+            db.refresh(player)
+        except IntegrityError:
+            # Same race as complete_quest above -- a duplicate collection
+            # request for the same treasure_id landed before the first one
+            # committed. The unique constraint on treasure collections
+            # caught it correctly; roll back and return current state
+            # instead of a 500.
+            db.rollback()
+            db.refresh(player)
 
     return _player_state_response(player)
 

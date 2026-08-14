@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useFBX } from '@react-three/drei'
+import { useFBX, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { clone as cloneWithSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
@@ -49,6 +49,15 @@ function collidesWithBoxes(x, z, items, radius) {
  * Avatar.jsx, only SCALE is applied to the model itself; the group's own
  * position (driven by the parent/follow logic below) is what places it in
  * the world.
+ *
+ * Structure: an outer `rootRef` group carries the actual world position
+ * (set every frame below) and optionally a floating `nudgeText` speech
+ * bubble; a NESTED `modelGroupRef` group holds only the imperative FBX
+ * mesh. These used to be the same ref/group — split apart specifically so
+ * the model-loading effect's `groupRef.current.clear()` (which really
+ * does need to wipe and rebuild the FBX mesh on every model swap) can
+ * never also wipe out the bubble, which React manages as a normal child
+ * of the outer group instead.
  */
 export default function CompanionWorldModel({
   modelUrl,
@@ -57,16 +66,18 @@ export default function CompanionWorldModel({
   isFollowing = false,
   followTarget = null, // { x, z } — the player's current position, when following
   layout = null,       // City layout data containing buildings and parking obstacles
+  nudgeText = null,    // Non-blocking guidance line to float above the companion's head, or null
 }) {
   const fbx = useFBX(modelUrl)
-  const groupRef = useRef()
+  const rootRef = useRef()       // outer group — carries world position + the nudge bubble
+  const modelGroupRef = useRef() // inner group — imperative FBX mesh only, subject to .clear()/.add()
   const mixerRef = useRef()
   const currentActionRef = useRef(null)
   const currentPosRef = useRef({ x: position?.[0] ?? 0, z: position?.[2] ?? 0 })
   const facingRef = useRef(0)
 
   useEffect(() => {
-    if (!fbx || !groupRef.current) return
+    if (!fbx || !modelGroupRef.current) return
 
     // Root-cause fix for the "floating hand" bug: Robot.fbx has SkinnedMesh
     // nodes (HandL/HandR) that sit as siblings of the RobotArmature skeleton
@@ -102,7 +113,7 @@ export default function CompanionWorldModel({
         `likely a broken/incomplete FBX export (e.g. skeleton only, no mesh attached). ` +
         `Not rendering it. Check the source file in your 3D tool.`
       )
-      groupRef.current.clear()
+      modelGroupRef.current.clear()
       return
     }
 
@@ -212,20 +223,20 @@ export default function CompanionWorldModel({
       }
     })
 
-    groupRef.current.clear()
-    groupRef.current.add(clone)
+    modelGroupRef.current.clear()
+    modelGroupRef.current.add(clone)
 
     mixerRef.current = new THREE.AnimationMixer(clone)
-    groupRef.current.userData.animations = fbx.animations
+    modelGroupRef.current.userData.animations = fbx.animations
   }, [fbx, modelUrl])
 
   // Re-applies whenever clipKey changes (death -> wave on repair complete)
   useEffect(() => {
-    if (!mixerRef.current || !groupRef.current?.userData?.animations) return
+    if (!mixerRef.current || !modelGroupRef.current?.userData?.animations) return
 
     const targetClipName = CLIP_NAMES[clipKey] || CLIP_NAMES.death
-    const clip = findClipByName(groupRef.current.userData.animations, targetClipName)
-      || groupRef.current.userData.animations[0]
+    const clip = findClipByName(modelGroupRef.current.userData.animations, targetClipName)
+      || modelGroupRef.current.userData.animations[0]
     if (!clip) return
 
     currentActionRef.current?.stop()
@@ -251,7 +262,7 @@ export default function CompanionWorldModel({
 
   useFrame((_, delta) => {
     if (clipKey !== 'death') mixerRef.current?.update(delta)
-    if (!groupRef.current) return
+    if (!rootRef.current) return
 
     if (isFollowing && followTarget) {
       const targetX = followTarget.x + FOLLOW_OFFSET.x
@@ -284,14 +295,36 @@ export default function CompanionWorldModel({
         facingRef.current = Math.atan2(dx, dz)
       }
 
-      groupRef.current.position.set(currentPosRef.current.x, position?.[1] ?? 0.17, currentPosRef.current.z)
-      groupRef.current.rotation.y = facingRef.current
+      rootRef.current.position.set(currentPosRef.current.x, position?.[1] ?? 0.17, currentPosRef.current.z)
+      rootRef.current.rotation.y = facingRef.current
     } else if (position) {
       // Static placement (still on the road, not yet repaired/following)
-      groupRef.current.position.set(position[0], position[1], position[2])
+      rootRef.current.position.set(position[0], position[1], position[2])
       currentPosRef.current = { x: position[0], z: position[2] }
     }
   })
 
-  return <group ref={groupRef} />
+  return (
+    <group ref={rootRef}>
+      <group ref={modelGroupRef} />
+
+      {/* Non-blocking guidance bubble -- floats above the companion's own
+          head, tracks its position automatically (it's a child of the
+          same group rootRef moves every frame), and is never touched by
+          modelGroupRef.clear()/.add() above since it lives one level up.
+          Rendered only while a nudge is actually active — see
+          useCompanionNudge.js / GamePage.jsx. */}
+      {nudgeText && (
+        <Html
+          position={[0, COMPANION_TARGET_HEIGHT + 0.4, 0]}
+          center
+          distanceFactor={8}
+          zIndexRange={[58, 58]}
+          occlude={false}
+        >
+          <div className="companion-nudge-bubble">{nudgeText}</div>
+        </Html>
+      )}
+    </group>
+  )
 }

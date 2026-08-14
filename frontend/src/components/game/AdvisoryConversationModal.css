@@ -10,6 +10,7 @@
 }
 
 .acm-panel {
+  position: relative;
   width: 100%;
   max-width: 480px;
   max-height: 70vh;
@@ -19,7 +20,67 @@
   border: 1px solid rgba(139, 92, 246, 0.4);
   border-radius: 18px;
   box-shadow: 0 0 32px rgba(88, 28, 235, 0.3), 0 16px 40px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  overflow: visible;
+}
+
+/* Robot help -- sits OUTSIDE the chat panel, floating above its top-right
+   corner, so it's never confused with the NPC/player conversation
+   itself. Tapping it opens a small popup right below the button rather
+   than injecting anything into the message log. */
+.acm-robot-dock {
+  position: absolute;
+  top: -46px;
+  right: 4px;
+  z-index: 2;
+}
+
+.acm-robot-help-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.55);
+  white-space: nowrap;
+}
+
+.acm-robot-hint-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: linear-gradient(155deg, rgba(20, 12, 46, 0.98), rgba(10, 6, 26, 0.98));
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(59, 130, 246, 0.3);
+}
+
+.acm-robot-hint-popup p {
+  margin: 0;
+  padding-right: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #dbeafe;
+}
+
+.acm-robot-hint-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px;
 }
 
 .acm-header {
@@ -95,10 +156,6 @@
   object-fit: cover;
 }
 
-.acm-avatar--robot {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-}
-
 .acm-avatar--player {
   background: linear-gradient(135deg, #22c55e, #86efac);
 }
@@ -123,17 +180,41 @@
   border-bottom-left-radius: 4px;
 }
 
-.acm-bubble--robot {
-  background: rgba(59, 130, 246, 0.18);
-  border: 1px solid rgba(139, 92, 246, 0.35);
-  color: #dbeafe;
-  border-bottom-left-radius: 4px;
-}
-
 .acm-bubble--player {
   background: linear-gradient(120deg, #3b82f6, #8b5cf6);
   color: #fff;
   border-bottom-right-radius: 4px;
+}
+
+/* The concluding takeaway -- floats ABOVE the chat panel's left edge,
+   mirroring the robot dock on the right. It is NOT a chat bubble and
+   never costs the player a tap: it simply appears the instant the real
+   mid-resolution choices become available, so the "lesson" is something
+   the player can glance at rather than something blocking their next
+   move. */
+.acm-takeaway-dock {
+  position: absolute;
+  top: -104px; /* stacks above the robot dock so the two never overlap */
+  left: 4px;
+  right: 4px;
+  z-index: 2;
+  max-width: calc(100% - 8px);
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #fef08a;
+  background: linear-gradient(155deg, rgba(20, 12, 46, 0.98), rgba(10, 6, 26, 0.98));
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(234, 179, 8, 0.2);
+  animation: acm-takeaway-fade-in 0.25s ease-out;
+}
+
+@keyframes acm-takeaway-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .acm-prompt {
@@ -180,18 +261,6 @@
   border-color: rgba(148, 163, 184, 0.4);
 }
 
-.acm-robot-help-btn {
-  flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid rgba(139, 92, 246, 0.5);
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  font-size: 18px;
-  cursor: pointer;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
-}
-
 .acm-continue-btn {
   width: 100%;
   padding: 11px;
@@ -224,15 +293,28 @@
     padding: 7px 10px;
   }
 
+  .acm-takeaway-dock {
+    top: -92px;
+    font-size: 10.5px;
+    padding: 8px 10px;
+  }
+
   .acm-card {
     font-size: 11px;
     min-width: 90px;
     padding: 8px 10px;
   }
 
+  .acm-robot-dock {
+    top: -40px;
+  }
+
   .acm-robot-help-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 15px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .acm-robot-hint-popup {
+    width: 190px;
   }
 }
