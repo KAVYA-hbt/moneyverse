@@ -1,13 +1,25 @@
 import { useEffect, useState } from 'react';
 import './LoadingScreen.css';
 
-export default function LoadingScreen({ isReady = false, onEnter }) {
+export default function LoadingScreen({ isReady = false, onEnter, playIntroSting, startAmbience, stopAmbience }) {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   // Plays a smooth fade/zoom-out once the player actually taps the button
   // -- the component doesn't just vanish, and onEnter (which reveals the
   // game page) only fires once that transition has actually played.
   const [isExiting, setIsExiting] = useState(false);
+
+  // Opening sting once, the moment this screen actually appears, then the
+  // looping ambience underneath for as long as it's up -- torn down on
+  // unmount (tapping through, or the component going away for any other
+  // reason) so it never keeps playing into the game itself.
+  useEffect(() => {
+    playIntroSting?.();
+    startAmbience?.();
+    return () => stopAmbience?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately
+    // once on mount only, not on every prop identity change.
+  }, []);
 
   // Joystick touch/mouse movement handlers
   const handleStart = () => {

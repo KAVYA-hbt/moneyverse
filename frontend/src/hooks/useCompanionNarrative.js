@@ -1,6 +1,14 @@
 import { useState, useCallback, useRef } from 'react'
 import { DIALOGUE_BEATS } from '../data/companionDialogue.js'
 
+// A single line in a beat's `lines` array can itself be a function (not
+// just the whole `lines` value) -- see companionDialogue.js's documented
+// shape and e.g. `first_quest_approach`. Every place that reads a line out
+// of a resolved array needs to run it through this, or a raw function ends
+// up handed to `.trim()` (crash) or straight into JSX as `{currentLine}`
+// (React's "functions are not valid as a child" error).
+const resolveLine = (line, ctx) => (typeof line === 'function' ? line(ctx) : line)
+
 /**
  * Drives one dialogue "beat" at a time. A beat is a small sequence of
  * lines (tap to advance), optionally ending in clickable-only choice
@@ -51,9 +59,10 @@ export function useCompanionNarrative() {
     // a refresh) could otherwise hand play() a beat whose `lines` resolve
     // to an empty array or a blank first string, and the modal would pop
     // open showing nothing at all with no way to dismiss it cleanly.
-    const firstLine = typeof resolvedBeat.lines === 'function'
-      ? resolvedBeat.lines(ctx)?.[0]
-      : resolvedBeat.lines?.[0]
+    const firstLine = resolveLine(
+      typeof resolvedBeat.lines === 'function' ? resolvedBeat.lines(ctx)?.[0] : resolvedBeat.lines?.[0],
+      ctx,
+    )
     if (!firstLine || (typeof firstLine === 'string' && firstLine.trim() === '')) {
       console.warn(`[useCompanionNarrative] Refused to open an empty beat:`, beatOrId)
       return
@@ -74,7 +83,9 @@ export function useCompanionNarrative() {
   }, [])
 
   const beat = activeBeat
-  const resolvedLines = beat ? (typeof beat.lines === 'function' ? beat.lines(context) : beat.lines) : []
+  const resolvedLines = beat
+    ? (typeof beat.lines === 'function' ? beat.lines(context) : beat.lines || []).map((line) => resolveLine(line, context))
+    : []
   const isLastLine = lineIndex === resolvedLines.length - 1
   const showOptions = isLastLine && !!beat?.options
 

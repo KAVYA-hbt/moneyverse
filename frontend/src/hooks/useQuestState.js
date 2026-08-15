@@ -237,16 +237,30 @@ export function useQuestState(layout, onboardingProfile) {
 
   const clearLastReward = useCallback(() => setLastReward(null), [])
 
-  // Overwrites local completed-quests/coins with the server's saved state —
-  // called once after fetching from the backend, so relogging in continues
-  // exactly where the player left off instead of starting fresh.
+  // Merges the server's saved state into local state -- called once
+  // after fetching from the backend, so relogging in continues exactly
+  // where the player left off instead of starting fresh.
+  //
+  // completed_quest_ids is a UNION with whatever's already completed
+  // locally, deliberately NOT a blind overwrite. This used to be
+  // `setCompleted(new Set(serverState.completed_quest_ids))`, which is a
+  // real race: if something completes quests locally (e.g. GamePage's
+  // Level-1 reconciliation safety net, which fires off local
+  // localStorage-backed progress and resolves fast) before this
+  // server GET request resolves (a real network round-trip, can easily
+  // finish later), the server's still-stale snapshot would silently
+  // stomp the just-completed quests back out -- and since that
+  // reconciliation is a one-shot guard, it never got a second chance to
+  // fix it again that session. A union can only ever add quests the
+  // server doesn't know about yet, never remove ones the client already
+  // knows are done.
   const hydrateFromServer = useCallback((serverState) => {
     if (!serverState) return
     if (Array.isArray(serverState.completed_quest_ids)) {
-      setCompleted(new Set(serverState.completed_quest_ids))
+      setCompleted((prev) => new Set([...prev, ...serverState.completed_quest_ids]))
     }
     if (typeof serverState.coins === 'number') {
-      setCoins(serverState.coins)
+      setCoins((prev) => Math.max(prev, serverState.coins))
     }
   }, [])
 

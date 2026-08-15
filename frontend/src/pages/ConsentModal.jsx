@@ -14,13 +14,18 @@ export default function ConsentModal({ onCancel, onAgree }) {
         <p className="consent__eyebrow">Step 2 of 2</p>
         <h2 className="consent__title">Consent &amp; Data Usage Agreement</h2>
 
-        <div className="consent__doc">
+        <a
+          className="consent__doc"
+          href="/docs/questcraft_data_usage_agreement.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <div className="consent__doc-icon">📄</div>
           <div>
-            <p className="consent__doc-name">QuestCraft Data Usage Agreement</p>
-            <p className="consent__doc-meta">PDF · 1 page</p>
+            <p className="consent__doc-name">Moneyverse Data Usage Agreement</p>
+            <p className="consent__doc-meta">PDF · 1 page · opens in a new tab</p>
           </div>
-        </div>
+        </a>
 
         <label className="consent__check">
           <input
@@ -28,7 +33,7 @@ export default function ConsentModal({ onCancel, onAgree }) {
             checked={readAgreement}
             onChange={(e) => setReadAgreement(e.target.checked)}
           />
-          <span>I have read the QuestCraft Data Usage Agreement</span>
+          <span>I have read the Moneyverse Data Usage Agreement</span>
         </label>
 
         <label className="consent__check">

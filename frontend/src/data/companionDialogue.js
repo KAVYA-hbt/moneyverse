@@ -209,29 +209,17 @@ export const DIALOGUE_BEATS = {
   product_funnel_checkin: {
     speaker: 'companion',
     animation: 'yes',
-    lines: ["Real talk for a second — what's actually been tripping you up lately? Not the city. You."],
+    lines: ["Real talk — ever thought about actually opening a savings account, instead of just holding onto cash?"],
     options: [
-      { label: '💰 Saving anything at all', value: 'saving' },
-      { label: '🏦 Understanding loans & interest', value: 'loans' },
-      { label: '📊 Not sure where my money goes', value: 'budgeting' },
+      { label: '🏦 Yeah, tell me more', value: 'yes' },
       { label: '👍 I\'m fine, honestly', value: 'decline' },
     ],
   },
 
-  product_funnel_response_saving: {
+  product_funnel_response_yes: {
     speaker: 'companion',
     animation: 'yes',
-    lines: ["Okay, that's really common, for what it's worth. There's an FD counter not far from here — want me to show you? No pressure either way."],
-  },
-  product_funnel_response_loans: {
-    speaker: 'companion',
-    animation: 'yes',
-    lines: ["Loans trip up a lot of people, honestly. There's a place nearby that breaks it down simply — want a look?"],
-  },
-  product_funnel_response_budgeting: {
-    speaker: 'companion',
-    animation: 'yes',
-    lines: ["That one's more common than you'd think. I know a spot that might help — want me to point you there?"],
+    lines: ["Good call — takes two minutes. Let's get you set up."],
   },
   product_funnel_response_decline: {
     speaker: 'companion',

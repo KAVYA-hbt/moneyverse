@@ -68,6 +68,16 @@
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 22px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.consent__doc:hover,
+.consent__doc:focus-visible {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(30, 139, 255, 0.4);
 }
 
 .consent__doc-icon {

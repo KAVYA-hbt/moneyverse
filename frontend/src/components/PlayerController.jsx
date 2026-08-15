@@ -68,7 +68,25 @@ function collidesWithBoxes(x, z, items, radius) {
   return false
 }
 
-export default function PlayerController({ layout, questState, onNearbyChange, avatarUrl, onPositionChange, movementLocked = false }) {
+export default function PlayerController({
+  layout,
+  questState,
+  onNearbyChange,
+  avatarUrl,
+  onPositionChange,
+  movementLocked = false,
+  // Cutscene hooks (e.g. the Mayor badge handoff) -- when scriptedWalkTarget
+  // is set, normal input is ignored (same as movementLocked) and the player
+  // instead walks toward that world {x, z} point on its own, calling
+  // onScriptedArrive() once it gets there. teleportTo is a one-shot {x, z,
+  // facing} snap, applied the instant it's given a new object reference --
+  // used to stage the player at a cutscene starting mark before the
+  // scripted walk begins, without it playing out as a visible dash across
+  // the map to get there.
+  scriptedWalkTarget = null,
+  onScriptedArrive,
+  teleportTo = null,
+}) {
   const { stateRef } = useKeyboardMovement()
   const spawn = useMemo(() => computeCenterSpawn(layout), [layout])
 
@@ -127,6 +145,25 @@ export default function PlayerController({ layout, questState, onNearbyChange, a
   const draggingRef = useRef(false)
   const lastTouchLookTimeRef = useRef(0)
   const isMovingRef = useRef(false)
+  const hasArrivedRef = useRef(false)
+
+  // One-shot teleport (e.g. staging the player at a cutscene mark) --
+  // fires whenever the CALLER passes a new teleportTo object, not on
+  // every render, so this can't fight the per-frame movement code below.
+  useEffect(() => {
+    if (!teleportTo) return
+    positionRef.current.set(teleportTo.x, positionRef.current.y, teleportTo.z)
+    if (typeof teleportTo.facing === 'number') rotationRef.current = teleportTo.facing
+    hasArrivedRef.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teleportTo])
+
+  // Resets arrival tracking each time a NEW scripted target is handed in
+  // (a changed object reference), so a second cutscene walk later in the
+  // session doesn't inherit the previous one's "already arrived" state.
+  useEffect(() => {
+    hasArrivedRef.current = false
+  }, [scriptedWalkTarget])
 
   // Event Listeners for Mouse (desktop) and Custom Mobile Events (touch)
   useEffect(() => {
@@ -183,34 +220,84 @@ export default function PlayerController({ layout, questState, onNearbyChange, a
   }, [])
 
   useFrame((_, delta) => {
+    const isScripted = !!scriptedWalkTarget && !hasArrivedRef.current
+    const effectivelyLocked = movementLocked || !!scriptedWalkTarget
+
+    // Scripted cutscene walk (e.g. Mayor badge handoff) -- drives the
+    // SAME positionRef/rotationRef the normal input branch below does,
+    // just steered toward a fixed target instead of live input, so the
+    // walk animation, collision-free movement, and camera-follow all
+    // keep working unchanged. Runs BEFORE the normal branch and skips it
+    // for this frame when active.
+    if (isScripted) {
+      const dx0 = scriptedWalkTarget.x - positionRef.current.x
+      const dz0 = scriptedWalkTarget.z - positionRef.current.z
+      const dist = Math.hypot(dx0, dz0)
+      const ARRIVE_THRESHOLD = 0.12
+      const CUTSCENE_WALK_SPEED = WALK_SPEED * 0.7 // a touch slower — reads as deliberate/staged, not a run
+
+      if (dist <= ARRIVE_THRESHOLD) {
+        hasArrivedRef.current = true
+        onScriptedArrive?.()
+      } else {
+        const dirX = dx0 / dist
+        const dirZ = dz0 / dist
+        const step = Math.min(dist, CUTSCENE_WALK_SPEED * delta)
+        positionRef.current.x += dirX * step
+        positionRef.current.z += dirZ * step
+
+        const targetAngle = Math.atan2(dirX, dirZ)
+        let diff = (targetAngle - rotationRef.current) % (Math.PI * 2)
+        if (diff > Math.PI) diff -= Math.PI * 2
+        if (diff < -Math.PI) diff += Math.PI * 2
+        rotationRef.current += diff * Math.min(1, delta * 12)
+      }
+
+      // Camera settles behind the player, looking toward the meeting
+      // point -- forced (not gated behind "is the user free-looking",
+      // unlike the normal branch below) since input is already locked
+      // for the whole cutscene anyway, so there's no free-look to
+      // respect. Slightly wider/higher than the normal follow distance
+      // for a bit more of an establishing view of the handoff.
+      const targetYaw = rotationRef.current + Math.PI
+      let yawDiff = (targetYaw - orbitRef.current.yaw) % (Math.PI * 2)
+      if (yawDiff > Math.PI) yawDiff -= Math.PI * 2
+      if (yawDiff < -Math.PI) yawDiff += Math.PI * 2
+      const camSnapSpeed = 3
+      orbitRef.current.yaw += yawDiff * Math.min(1, delta * camSnapSpeed)
+      orbitRef.current.pitch += (0.4 - orbitRef.current.pitch) * Math.min(1, delta * camSnapSpeed)
+      orbitRef.current.distance += (7 - orbitRef.current.distance) * Math.min(1, delta * camSnapSpeed)
+    }
+
     // Keyboard A/D now rotates the CAMERA continuously (same idea as
     // mouse-drag / touch-look), instead of the old one-shot 90° character
     // turn — which stopped making sense once movement became
     // camera-relative, since it got overwritten the instant you also moved.
-    // While movementLocked (e.g. the companion repair intro is playing),
-    // all player input is ignored here — the camera/intro-flight logic
-    // further down is untouched, only the player's own control is frozen.
-    const kbTurnRate = movementLocked ? 0 : stateRef.current.turnRate
+    // While movementLocked (e.g. the companion repair intro is playing) OR
+    // a scripted cutscene walk is active, all player input is ignored here
+    // — the camera/intro-flight logic further down is untouched, only the
+    // player's own control is frozen.
+    const kbTurnRate = effectivelyLocked ? 0 : stateRef.current.turnRate
     if (kbTurnRate !== 0) {
       orbitRef.current.yaw += kbTurnRate * KEYBOARD_TURN_SPEED * delta
       lastTouchLookTimeRef.current = performance.now() // reuse the same "user is looking" grace window
     }
 
     // Combine keyboard & mobile joystick inputs — mobile joystick wins if active
-    const kbForward = movementLocked ? 0 : stateRef.current.forward
-    const kbRun = movementLocked ? false : stateRef.current.run
+    const kbForward = effectivelyLocked ? 0 : stateRef.current.forward
+    const kbRun = effectivelyLocked ? false : stateRef.current.run
 
-    const fwdInput = movementLocked
+    const fwdInput = effectivelyLocked
       ? 0
       : mobileInputRef.current.forward !== 0
       ? mobileInputRef.current.forward
       : kbForward
-    const strInput = movementLocked ? 0 : mobileInputRef.current.strafe
-    const isRunning = movementLocked ? false : (mobileInputRef.current.run || kbRun)
+    const strInput = effectivelyLocked ? 0 : mobileInputRef.current.strafe
+    const isRunning = effectivelyLocked ? false : (mobileInputRef.current.run || kbRun)
 
-    const moveMag = Math.hypot(fwdInput, strInput)
-    const moving = moveMag > 0.15
-    isMovingRef.current = moving
+    const moveMag = isScripted ? 0 : Math.hypot(fwdInput, strInput)
+    const moving = isScripted ? false : moveMag > 0.15
+    isMovingRef.current = moving || isScripted
     const speed = isRunning ? RUN_SPEED : WALK_SPEED
 
     // Camera-Relative 360° Movement — forward/strafe are relative to
@@ -273,10 +360,15 @@ export default function PlayerController({ layout, questState, onNearbyChange, a
       onPositionChange({
         x: positionRef.current.x,
         z: positionRef.current.z,
+        facing: rotationRef.current,
       })
     }
 
-    const nextState = moving ? (isRunning ? 'run' : 'walk') : 'idle'
+    // isScripted stays true for the walking frames and flips false the
+    // instant hasArrivedRef is set above, so this naturally lands on
+    // 'walk' while en route and 'idle' the moment it arrives — no
+    // separate scripted-vs-normal branching needed here.
+    const nextState = (moving || isScripted) ? (isRunning ? 'run' : 'walk') : 'idle'
     if (nextState !== movementState) setMovementState(nextState)
 
     if (groupRef.current) {

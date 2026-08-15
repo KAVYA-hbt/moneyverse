@@ -52,6 +52,16 @@ export function useAdvisoryConversation() {
   const npcIdRef = useRef(null)
   const reachedFullResolutionRef = useRef(false)
 
+  // Behavioral-signal tracking -- feeds AdvisoryChoice on the backend
+  // (see main.py's log_advisory_choice / models.py's AdvisoryChoice).
+  // Deliberately refs, not state: none of this needs to trigger a
+  // re-render, it just needs to be readable once the conversation ends.
+  const startedAtRef = useRef(null)
+  const firstChoiceAtRef = useRef(null)   // timestamp of the FIRST selectOption tap (initial deliberation speed)
+  const finalChoiceValueRef = useRef(null) // the option that was actually confirmed and carried through
+  const reversedCountRef = useRef(0)       // times the player backed out at the confirm step
+  const robotHintUsedRef = useRef(false)   // asked the companion for help at any point this conversation
+
   const pushMessage = useCallback((speaker, text) => {
     if (!text) return
     setMessages((prev) => [...prev, { id: nextId(), speaker, text }])
@@ -78,6 +88,11 @@ export function useAdvisoryConversation() {
     scriptRef.current = script
     npcIdRef.current = npcId
     reachedFullResolutionRef.current = false
+    startedAtRef.current = Date.now()
+    firstChoiceAtRef.current = null
+    finalChoiceValueRef.current = null
+    reversedCountRef.current = 0
+    robotHintUsedRef.current = false
     bubbleIdCounter = 0
     setMessages([{ id: nextId(), speaker: 'npc', text: script.dilemmaLine }])
     setPhase('greeting')
@@ -97,6 +112,7 @@ export function useAdvisoryConversation() {
   const selectOption = useCallback((value, label) => {
     const script = scriptRef.current
     if (!script) return
+    if (firstChoiceAtRef.current === null) firstChoiceAtRef.current = Date.now()
     pushMessage('player', label)
     setRobotHintVisible(false)
 
@@ -106,6 +122,7 @@ export function useAdvisoryConversation() {
       pushMessage('npc', script.confirmQuestion[value])
       setPhase('confirm')
     } else {
+      finalChoiceValueRef.current = value
       pushMessage('npc', script.spendDeclineLine)
       pushMessage('player', `No problem! See you later, ${script.npcName}.`)
       setPhase('done')
@@ -151,9 +168,11 @@ export function useAdvisoryConversation() {
     setRobotHintVisible(false)
 
     if (confirmed) {
+      finalChoiceValueRef.current = value
       pushMessage('player', 'Yes, do it.')
       beginResolution(script, value)
     } else {
+      reversedCountRef.current += 1
       pushMessage('player', 'No, let me think again.')
       setPendingChoice(null)
       setPhase('greeting')
@@ -174,6 +193,7 @@ export function useAdvisoryConversation() {
       : script.robotResolutionLine?.[value]
 
     if (line) {
+      robotHintUsedRef.current = true
       setRobotHintText(line)
       setRobotHintVisible(true)
     }
@@ -263,6 +283,18 @@ export function useAdvisoryConversation() {
     signal: script?.signal ?? null,
     funnelLine: script?.funnelLine ?? null,
     reachedFullResolution: reachedFullResolutionRef.current,
+    // Raw behavioral signal for this conversation -- only meaningful once
+    // phase is 'done'. Read once, at completion; not meant to be watched
+    // mid-conversation (values keep changing until the very end).
+    analytics: {
+      choiceValue: finalChoiceValueRef.current,
+      decisionTimeMs: firstChoiceAtRef.current && startedAtRef.current
+        ? firstChoiceAtRef.current - startedAtRef.current
+        : null,
+      totalConversationMs: startedAtRef.current ? Date.now() - startedAtRef.current : null,
+      reversedCount: reversedCountRef.current,
+      robotHintUsed: robotHintUsedRef.current,
+    },
     currentOptions: phase === 'greeting' ? script?.options ?? null : null,
     showConfirmCards: phase === 'confirm',
     resolutionReactionOptions,

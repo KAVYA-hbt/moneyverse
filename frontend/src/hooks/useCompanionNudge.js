@@ -41,7 +41,14 @@ export function useCompanionNudge() {
     }
 
     const resolvedLines = typeof beat.lines === 'function' ? beat.lines(ctx) : beat.lines
-    const cleanLines = (resolvedLines || []).filter((line) => line && line.trim() !== '')
+    // Each individual entry can ALSO be a function (see companionDialogue.js's
+    // documented shape) -- e.g. ["static string", (ctx) => `dynamic ${ctx.x}`].
+    // Resolving only ever checked whether the WHOLE `lines` value was a
+    // function, so a per-line function slipped through as-is and crashed
+    // here on `.trim()` since functions don't have that method.
+    const cleanLines = (resolvedLines || [])
+      .map((line) => (typeof line === 'function' ? line(ctx) : line))
+      .filter((line) => typeof line === 'string' && line.trim() !== '')
     if (cleanLines.length === 0) {
       console.warn(`[useCompanionNudge] Refused to show an empty nudge:`, beatOrId)
       return

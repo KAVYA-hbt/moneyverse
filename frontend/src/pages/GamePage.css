@@ -963,6 +963,75 @@ canvas {
   .level-up-number { font-size: 30px; }
   .level-up-title { font-size: 14px; }
 }
+
+/* Persistent bottom panel for the post-level-up product funnel + Onboard
+   CTA (see GamePage.jsx's funnelPrompt state) -- stays docked through the
+   whole ask -> answer -> onboard sequence instead of a chat bubble that
+   vanishes followed by a separate, previously-unstyled CTA appearing
+   later with no visual link back to the question. */
+.funnel-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 500;
+  width: min(92vw, 480px);
+  background: rgba(17, 17, 30, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  animation: funnel-panel-in 0.3s ease-out;
+}
+
+@keyframes funnel-panel-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.funnel-panel-text {
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.4;
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.funnel-panel-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.funnel-panel-btn {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.funnel-panel-btn:hover {
+  transform: translateY(-1px);
+}
+
+.funnel-panel-btn--primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+
+.funnel-panel-btn--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 500px) {
+  .funnel-panel { bottom: 16px; padding: 14px 16px; }
+  .funnel-panel-text { font-size: 14px; }
+}
 /* =========================================================================
    COMPANION REPAIR / NAMING CARDS — small floating cards, NOT full-screen,
    so the player's avatar and the companion (both rendered in the real 3D

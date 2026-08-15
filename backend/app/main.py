@@ -1,8 +1,8 @@
 import os
 import json
-from datetime import date
+from datetime import date, datetime
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -13,7 +13,7 @@ from openai import OpenAI
 # Import your city builder module
 from app.city_builder.generate_layout import generate_full_layout
 from app.db import Base, engine, get_db
-from app import models, schemas
+from app import models, schemas, profile_builder, mock_profiles
 
 load_dotenv()
 
@@ -248,11 +248,29 @@ def _player_state_response(player: models.Player) -> schemas.PlayerStateResponse
 
 
 @app.post("/api/player/sync", response_model=schemas.PlayerStateResponse)
-def sync_player(payload: schemas.PlayerSyncRequest, db: Session = Depends(get_db)):
+def sync_player(payload: schemas.PlayerSyncRequest, request: Request, db: Session = Depends(get_db)):
     """Call once when the game loads. Creates the player row on first ever
-    visit, syncs the daily login streak, and returns their full saved state."""
+    visit, syncs the daily login streak, and returns their full saved state.
+
+    Also logs a LoginEvent (IP + user agent) -- INTERNAL/TEST USE ONLY.
+    This is not yet covered by the player-facing consent doc
+    (questcraft_data_usage_agreement.pdf lists name/avatar, progress, quiz
+    responses, and basic usage events -- not IP address or behavioral
+    profiling). Do not expose this data outside internal tooling, and do
+    not wire it into any external export (e.g. the digital-twin site)
+    until the consent doc is updated to cover it."""
     player = _get_or_create_player(db, payload)
     _sync_daily_streak(db, player.stats)
+    # X-Forwarded-For first, since this typically sits behind a proxy/LB in
+    # any real deployment -- falls back to the direct connection otherwise.
+    forwarded = request.headers.get("x-forwarded-for")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else None)
+    db.add(models.LoginEvent(
+        player_id=player.id,
+        ip_address=client_ip,
+        user_agent=request.headers.get("user-agent"),
+    ))
+    db.commit()
     db.refresh(player)
     return _player_state_response(player)
 
@@ -280,6 +298,7 @@ def complete_quest(email: str, payload: schemas.CompleteQuestRequest, db: Sessio
         db.add(models.QuestCompletion(
             player_id=player.id,
             quest_id=payload.quest_id,
+            quest_type=models.quest_category_for(payload.quest_id),
             reward_coins=payload.reward_coins,
         ))
         player.stats.coins += payload.reward_coins
@@ -365,6 +384,72 @@ def get_leaderboard(limit: int = 10, db: Session = Depends(get_db)):
     return [schemas.LeaderboardEntry(name=r[0], email=r[1], coins=r[2]) for r in rows]
 
 
+# ===============================================================================
+# 8. FINANCIAL / PSYCHOMETRIC PROFILE EXPORT — for the external Digital Twin
+#    site and the admin dashboard. See profile_builder.py for how each field
+#    is computed and mock_profiles.py for synthetic test data.
+#
+#    INTERNAL/TEST USE ONLY for now — not yet covered by the player consent
+#    doc (questcraft_data_usage_agreement.pdf). Do not point this at real
+#    players' data from an external system until that's updated.
+# ===============================================================================
+
+def _get_player_or_404(email: str, db: Session) -> models.Player:
+    player = db.query(models.Player).filter(models.Player.email == email).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player
+
+
+@app.get("/api/player/{email}/financial-profile")
+def get_financial_profile(email: str, db: Session = Depends(get_db)):
+    player = _get_player_or_404(email, db)
+    profile = profile_builder.build_financial_profile(player, db)
+    profile["last_updated"] = datetime.utcnow().isoformat()
+    return profile
+
+
+@app.get("/api/player/{email}/behavioral-profile")
+def get_behavioral_profile(email: str, db: Session = Depends(get_db)):
+    player = _get_player_or_404(email, db)
+    profile = profile_builder.build_behavioral_profile(player, db)
+    profile["last_updated"] = datetime.utcnow().isoformat()
+    return profile
+
+
+@app.get("/api/admin/export-profiles")
+def export_all_profiles(db: Session = Depends(get_db)):
+    """Batch dump, all players, REAL data. One entry per player with both
+    profile JSONs side by side."""
+    players = db.query(models.Player).all()
+    out = []
+    for player in players:
+        fin = profile_builder.build_financial_profile(player, db)
+        beh = profile_builder.build_behavioral_profile(player, db)
+        fin["last_updated"] = beh["last_updated"] = datetime.utcnow().isoformat()
+        out.append({"email": player.email, "financial_behavior": fin, "psychometric": beh})
+    return {"count": len(out), "players": out}
+
+
+@app.get("/api/admin/mock-profiles")
+def get_mock_profiles(count: int = 10):
+    """Synthetic data for testing the admin dashboard UI right now, before
+    enough real players exist. Every record carries "synthetic": true —
+    the dashboard must never render these without that flag visible."""
+    count = max(1, min(count, 200))
+    return {
+        "count": count,
+        "players": [
+            {
+                "email": f"mock_player_{i}@example.test",
+                "financial_behavior": mock_profiles.mock_financial_profile(),
+                "psychometric": mock_profiles.mock_behavioral_profile(),
+            }
+            for i in range(count)
+        ],
+    }
+
+
 @app.post("/api/player/{email}/scenario")
 def select_scenario(email: str, payload: schemas.ScenarioSelectRequest, db: Session = Depends(get_db)):
     player = db.query(models.Player).filter(models.Player.email == email).first()
@@ -388,6 +473,7 @@ def log_quiz_attempt(email: str, payload: schemas.QuizAttemptLogRequest, db: Ses
         request_type=payload.request_type,
         quest_or_treasure_id=payload.quest_or_treasure_id,
         topic=payload.topic,
+        topic_category=models.quest_category_for(payload.quest_or_treasure_id),
         question_text=payload.question_text,
         options_json=json.dumps(payload.options),
         correct_index=payload.correct_index,
@@ -426,6 +512,7 @@ def log_telemetry_batch(payload: schemas.TelemetryBatchRequest, db: Session = De
                 request_type=p.get("request_type", "UNKNOWN"),
                 quest_or_treasure_id=p.get("quest_or_treasure_id"),
                 topic=p.get("topic"),
+                topic_category=models.quest_category_for(p.get("quest_or_treasure_id")),
                 question_text=p.get("question_text"),
                 options_json=json.dumps(p.get("options", [])),
                 correct_index=p.get("correct_index"),
@@ -444,6 +531,45 @@ def log_telemetry_batch(payload: schemas.TelemetryBatchRequest, db: Session = De
                 source_npc_id=p.get("source_npc_id"),
                 saves_money=None if p.get("saves_money") is None else int(p["saves_money"]),
                 savings_method=p.get("savings_method"),
+            ))
+            written += 1
+        elif event.type == "onboard_cta_click":
+            p = event.payload
+            db.add(models.OnboardCtaClick(
+                player_id=player.id,
+                level=p.get("level"),
+            ))
+            written += 1
+        elif event.type == "badge_published":
+            p = event.payload
+            db.add(models.BadgePublished(
+                player_id=player.id,
+                badge_id=p.get("badge_id"),
+                name_on_badge=p.get("name_on_badge"),
+                level=p.get("level"),
+            ))
+            written += 1
+        elif event.type == "advisory_choice":
+            p = event.payload
+            db.add(models.AdvisoryChoice(
+                player_id=player.id,
+                npc_id=p.get("npc_id", "unknown"),
+                choice_value=p.get("choice_value") or "unknown",
+                reversed_count=p.get("reversed_count", 0) or 0,
+                robot_hint_used=int(bool(p.get("robot_hint_used"))),
+                decision_time_ms=p.get("decision_time_ms"),
+                total_conversation_ms=p.get("total_conversation_ms"),
+                level=p.get("level"),
+            ))
+            written += 1
+        elif event.type == "task_timing":
+            p = event.payload
+            db.add(models.PageTaskTiming(
+                player_id=player.id,
+                task_type=p.get("task_type", "unknown"),
+                task_id=p.get("task_id"),
+                duration_ms=p.get("duration_ms", 0) or 0,
+                level=p.get("level"),
             ))
             written += 1
         # else: unrecognized event type — silently skipped, see docstring.

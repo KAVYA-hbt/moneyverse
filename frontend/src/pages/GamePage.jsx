@@ -64,6 +64,7 @@ const ROBOT_COMPANION = {
 }
 import WanderingNPC from '../components/game/WanderingNPC.jsx'
 import FixedStoryNPC from '../components/game/FixedStoryNPC.jsx'
+import WalkingCameo from '../components/game/WalkingCameo.jsx'
 import ModelErrorBoundary from '../components/game/ModelErrorBoundary.jsx'
 import { AVATARS } from './UserDetailsPage.jsx'
 import { useGameAudio } from '../hooks/useGameAudio.js'
@@ -268,9 +269,114 @@ export default function GamePage() {
     setBadgeQueue((q) => [...q, badge])
   }, [])
 
+  // --- Mayor badge-handoff cutscene ------------------------------------
+  // A staged moment before the badge modal itself: the Mayor (the "Suit
+  // Man" avatar, id avatar_6) walks in from one side, the player's own
+  // avatar is briefly repositioned and walks in from the other side, and
+  // once both have arrived and faced each other, the actual badge modal
+  // opens -- replacing what used to be the badge just appearing out of
+  // nowhere on a timer.
+  //
+  // Geometry is computed ONCE, from wherever the player happens to be
+  // standing (and facing) the moment the level-up fires -- "left"/
+  // "right" are relative to the player's own facing at that instant
+  // (their forward vector), not the camera, since the camera can be
+  // freely orbited and has no fixed "left/right" of its own.
+  const MAYOR_AVATAR_URL = useMemo(() => AVATARS.find((a) => a.id === 'avatar_6')?.url, [])
+  const [mayorHandoff, setMayorHandoff] = useState(null)
+
+  const startMayorHandoff = useCallback((badgePayload) => {
+    const p = playerPosRef.current
+    if (!p || !MAYOR_AVATAR_URL) {
+      // No known player position/avatar yet (shouldn't normally happen
+      // once the game is ready) -- fail open to the plain badge rather
+      // than silently losing it because a cutscene couldn't be staged.
+      queueBadge(badgePayload)
+      return
+    }
+    const y = 0.17 // matches the ground height PlayerController itself spawns/walks at
+    const facing = p.facing ?? 0
+    const fwd = { x: Math.sin(facing), z: Math.cos(facing) }
+    const right = { x: Math.cos(facing), z: -Math.sin(facing) }
+    const meet = { x: p.x + fwd.x * 3, z: p.z + fwd.z * 3 }
+
+    // Distances tuned so the whole cameo -- both walk-ins plus the "face
+    // each other" hold before the badge appears -- lands at ~5 seconds
+    // total: Mayor covers 8.7 units at WalkingCameo's 2.8 units/sec
+    // (~3.1s, the longer of the two entrances), player covers 5.7 units
+    // at the same speed (~2.0s) so it reads as a real walk-in rather than
+    // a hop-then-stand-and-wait. The 1900ms hold below makes up the rest.
+    setMayorHandoff({
+      mayorFrom: { x: meet.x - right.x * 10, y, z: meet.z - right.z * 10 },
+      mayorTo: { x: meet.x - right.x * 1.3, y, z: meet.z - right.z * 1.3 },
+      playerFrom: { x: meet.x + right.x * 7, z: meet.z + right.z * 7, facing: facing + Math.PI },
+      playerTo: { x: meet.x + right.x * 1.3, z: meet.z + right.z * 1.3 },
+      mayorArrived: false,
+      playerArrived: false,
+      badgePayload,
+    })
+  }, [MAYOR_AVATAR_URL, queueBadge])
+
+  // Once BOTH have arrived and are facing each other, hold for a beat
+  // (long enough to read as "the Mayor is handing something over"), play
+  // the applause cue, then have the Mayor actually SAY the line that was
+  // always written for this moment (mayor_ceremony) followed by the
+  // companion's own reaction -- previously this timer went straight to
+  // queueBadge() with neither beat ever invoked, so the Mayor visibly
+  // walked up and said nothing. narrative.play()'s 3rd-arg callback is
+  // what chains beat -> beat -> badge, same pattern used for other
+  // multi-turn moments in this file (e.g. npc_recognition_first_time).
+  // 1900ms here + the ~3.1s Mayor walk-in above lands the applause right
+  // as the cutscene settles; the badge itself now opens once the player
+  // has actually read/dismissed both lines, not on a blind second timer.
+  useEffect(() => {
+    if (!mayorHandoff || !mayorHandoff.mayorArrived || !mayorHandoff.playerArrived) return
+    let badgeShown = false
+    const showBadgeOnce = () => {
+      if (badgeShown) return
+      badgeShown = true
+      queueBadge(mayorHandoff.badgePayload)
+      setMayorHandoff(null)
+    }
+    const t = setTimeout(() => {
+      playRewardSound('applause')
+      narrative.play('mayor_ceremony', { playerName: profile.name }, () => {
+        narrative.play('mayor_ceremony_companion_reaction', {}, showBadgeOnce)
+      })
+      // Guaranteed fallback: the dialogue above needs the player to tap
+      // through 2 lines to reach showBadgeOnce(). If they don't (missed
+      // it, tapped away, whatever), the badge previously just never
+      // showed up at all. This forces it open ~9s later regardless --
+      // long enough to comfortably read both lines, short enough that it
+      // doesn't feel like a random delayed popup.
+      setTimeout(showBadgeOnce, 9000)
+    }, 1900)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- playRewardSound/
+    // narrative/profile deliberately omitted: same reasoning as elsewhere in
+    // this file (e.g. totalCoins above) -- they're declared further down/
+    // are stable-identity hooks, and this only ever runs inside a timeout
+    // callback firing well after the full render (including those
+    // declarations) has completed, so reading them here is safe.
+  }, [mayorHandoff, queueBadge])
+
   const closeBadge = useCallback(() => {
+    const closingBadge = badgeQueue[0]
     setBadgeQueue((q) => q.slice(1))
-  }, [])
+    // See where funnelLevel is set (the level-2 badge payload above) --
+    // this is what makes the onboarding question wait for the badge to
+    // actually be dismissed (skip, or the close after publishing) instead
+    // of popping up on its own timer that could land mid-badge or overlap
+    // the mayor cutscene entirely.
+    if (closingBadge?.funnelLevel) {
+      fireProductFunnelCheckin(closingBadge.funnelLevel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fireProductFunnelCheckin
+    // deliberately omitted: declared further down in this component (same
+    // reasoning as elsewhere in this file, e.g. totalCoins) -- safe to call
+    // here since this only ever runs from the badge's own close/skip click,
+    // well after the full render (including that declaration) has completed.
+  }, [badgeQueue])
 
   const handleBadgePublished = useCallback((badgeId, badgeName) => {
     emitTelemetry(profile.email, {
@@ -280,22 +386,57 @@ export default function GamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // --- Post product-funnel "Onboard" CTA ------------------------------
-  // A small, non-blocking call-to-action that appears once the player has
-  // actually read (tapped through) the companion's product-funnel
-  // response line -- see fireProductFunnelCheckin below, which passes a
-  // completion callback into that beat specifically to flip this on at
-  // the right moment rather than guessing with a timer.
-  const [showOnboardCta, setShowOnboardCta] = useState(false)
+  // --- Post-level-up product funnel + Onboard CTA --------------------
+  // Previously this was TWO disconnected moments: a full-screen chat
+  // bubble asking the question (tap through it, gone), then, only if you
+  // said yes, a SEPARATE unstyled dock (.onboard-cta-dock had no CSS at
+  // all -- effectively invisible) appearing later with no visual link
+  // back to the question that spawned it. Replaced with one persistent
+  // bottom panel (see the JSX render below) that stays up through the
+  // whole ask -> answer -> onboard sequence instead of fragmenting it.
+  //
+  // funnelPrompt: null | 'asking' | 'yes' | 'declined'
+  const [funnelPrompt, setFunnelPrompt] = useState(null)
+  const checkedInLevelsRef = useRef(new Set())
+  const fireProductFunnelCheckin = useCallback((level) => {
+    if (checkedInLevelsRef.current.has(level)) return
+    checkedInLevelsRef.current.add(level)
+    setFunnelPrompt('asking')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleFunnelYes = useCallback(() => {
+    setFunnelPrompt('yes')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleFunnelDecline = useCallback(() => {
+    setFunnelPrompt('declined')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (funnelPrompt !== 'declined') return
+    const t = setTimeout(() => setFunnelPrompt(null), 2600)
+    return () => clearTimeout(t)
+  }, [funnelPrompt])
+
+  // PLACEHOLDER TARGET: the real savings-account onboarding page is a
+  // separate build/video, not part of this game. Until that exists,
+  // this intentionally leaves the game entirely and goes to a public
+  // placeholder URL, purely so the click has somewhere real to land for
+  // a demo -- swap ONBOARD_PLACEHOLDER_URL for the real onboarding URL
+  // once it exists, nothing else here needs to change.
+  const ONBOARD_PLACEHOLDER_URL = 'https://www.google.com'
   const handleOnboardClick = useCallback(() => {
     emitTelemetry(profile.email, {
       type: 'onboard_cta_click',
       payload: { level: currentLevel },
     })
-    setShowOnboardCta(false)
-    navigate('/onboard')
+    setFunnelPrompt(null)
+    window.location.href = ONBOARD_PLACEHOLDER_URL
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate])
+  }, [])
   // Companion flow state machine — Robot spawns automatically as soon as
   // GamePage loads (no picker screen, this IS the first task, discoverable
   // in-world exactly like any quest). 'placed' (dead, on the road, player
@@ -481,6 +622,63 @@ export default function GamePage() {
   const levelStartHintsRef = useRef(null)
   const hintScrollsRef = useRef(0)
 
+  // --- Page/task timing telemetry ---------------------------------------
+  // Duration-based engagement signal for the financial/behavioral profile
+  // pipeline -- how LONG someone actually spends per surface, not just
+  // whether they finished it. Fire-and-forget, same pattern as every
+  // other emitTelemetry call in this file; never blocks gameplay.
+  const emitTaskTiming = useCallback((taskType, taskId, startedAt) => {
+    if (!startedAt) return
+    const durationMs = Date.now() - startedAt
+    if (durationMs < 200) return // filters a stray open/close double-fire
+    emitTelemetry(profile.email, {
+      type: 'task_timing',
+      payload: { task_type: taskType, task_id: taskId, duration_ms: durationMs, level: currentLevel },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- currentLevel
+    // deliberately omitted: declared further down in this component (same
+    // reasoning as totalCoins/narrative elsewhere in this file) -- safe to
+    // read here since this only ever fires from an effect/handler running
+    // after the full render, including that declaration, has completed.
+  }, [profile.email])
+
+  const miniGameSessionRef = useRef(null)
+  useEffect(() => {
+    if (miniGameHubOpen) {
+      miniGameSessionRef.current = { taskId: nearbyMiniGameSpot ?? null, startedAt: Date.now() }
+    } else if (miniGameSessionRef.current) {
+      emitTaskTiming('minigame', miniGameSessionRef.current.taskId, miniGameSessionRef.current.startedAt)
+      miniGameSessionRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [miniGameHubOpen])
+
+  const noticeBoardOpenedAtRef = useRef(null)
+  useEffect(() => {
+    if (noticeBoardOpen) {
+      noticeBoardOpenedAtRef.current = Date.now()
+    } else if (noticeBoardOpenedAtRef.current) {
+      emitTaskTiming('notice_board', null, noticeBoardOpenedAtRef.current)
+      noticeBoardOpenedAtRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noticeBoardOpen])
+
+  // Whole-session duration -- fires on tab close/nav-away (pagehide,
+  // same event telemetryBus itself listens on to force a final flush)
+  // and as a fallback on unmount for an in-app navigation away from
+  // GamePage that never triggers pagehide.
+  const sessionStartRef = useRef(Date.now())
+  useEffect(() => {
+    const handlePageHide = () => emitTaskTiming('session', null, sessionStartRef.current)
+    window.addEventListener('pagehide', handlePageHide)
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      emitTaskTiming('session', null, sessionStartRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Repeats the notice board arrow every 5 seconds until the player has
   // opened it at least once -- the one-shot flashes (spawn + per-task)
   // are easy to miss if you're not looking right at that moment; this
@@ -515,7 +713,8 @@ export default function GamePage() {
   // a console warning instead of crashing the entire Vite dev server (as
   // happened when the level-up file turned out to be .ogg, not .mp3, and
   // was still sitting in src/assets rather than public/).
-  const { isMuted, toggleMute, playSuccessSound, playRewardSound } = useGameAudio('/audio/bgm.mp3')
+  const { isMuted, toggleMute, playSuccessSound, playRewardSound, startAmbience, stopAmbience } = useGameAudio('/audio/bgm.mp3')
+  const playIntroSting = useCallback(() => playRewardSound('intro_sting'), [playRewardSound])
 
   useEffect(() => {
     try {
@@ -655,28 +854,35 @@ export default function GamePage() {
     return null // sequence complete
   }, [currentLevel, companionPhase, levelTaskProgress.completedNpcIds, levelTaskProgress.completedMinigameIds])
 
-  // Safety-net reconciliation, one-shot per level: the per-event handlers
-  // above only write a chain slot the moment a task is FRESHLY completed,
-  // so a save made before this 5-slot remapping existed (or any other way
-  // a slot got skipped) can leave the notice board showing the sequence
-  // as fully done locally while questState's real completed-quest count
-  // never actually reached 5 -- meaning the level never flips and the
-  // level-up banner/badge/product-funnel check-in never fire, even though
-  // the board reads 100%. Once level1NextRequiredStep says the sequence
-  // is genuinely done, force-complete all 5 slots directly; completeQuest()
-  // already no-ops on an id that's already in the set, so this is harmless
-  // even when everything was already correctly in sync.
-  const reconciledLevel1Ref = useRef(false)
+  // Safety-net reconciliation: the per-event handlers above only write a
+  // chain slot the moment a task is FRESHLY completed, so a save made
+  // before this 5-slot remapping existed (or any other way a slot got
+  // skipped) can leave the notice board showing the sequence as fully
+  // done locally while questState's real completed-quest count never
+  // actually reached 5 -- meaning the level never flips and the
+  // level-up banner/badge/product-funnel check-in never fire, even
+  // though the board reads 100%. Once level1NextRequiredStep says the
+  // sequence is genuinely done, force-complete all 5 slots directly.
+  //
+  // Deliberately NOT a permanent one-shot (no longer gated by a ref that
+  // gets consumed forever after the first check) -- this used to be a
+  // single guaranteed pass per mount, but that meant a later regression
+  // (e.g. hydrateFromServer's async response landing AFTER this already
+  // ran and, at the time, blindly overwriting the just-fixed completed
+  // set -- see the union fix in useQuestState.js) had no way to ever get
+  // fixed again that session. completeQuest() already no-ops on an id
+  // that's already in the set, so safely re-running this whenever
+  // questState.isComplete's identity changes (i.e. the completed set
+  // itself changed, for any reason) costs nothing when everything's
+  // already correct, and self-heals when it isn't.
   useEffect(() => {
     if (currentLevel !== 1 || level1NextRequiredStep !== null) return
-    if (reconciledLevel1Ref.current) return
-    reconciledLevel1Ref.current = true
     for (let i = 0; i < 5; i++) {
       const chainId = getTaskChainId(i)
-      if (chainId) questState.completeQuest(chainId)
+      if (chainId && !questState.isComplete(chainId)) questState.completeQuest(chainId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLevel, level1NextRequiredStep])
+  }, [currentLevel, level1NextRequiredStep, questState.isComplete, questState.completeQuest, getTaskChainId])
 
 
   // Hydrates task progress for whatever the current level actually is —
@@ -723,27 +929,6 @@ export default function GamePage() {
   // the raw hook still technically detects proximity to it.
   const capstoneChainId = getTaskChainId(4)
   const effectiveNearbyQuest = nearbyQuest?.questId === capstoneChainId ? nearbyQuest : null
-
-  // Fires ONCE per level — a delay after the level-up dialogue so it
-  // never overlaps with the companion's "you're an Explorer now" line.
-  // Not gated by useCompanionNarrative itself (that hook has no built-in
-  // "already seen" tracking, it's meant to be called deliberately) — this
-  // ref tracks which levels have already gotten a check-in this session.
-  const checkedInLevelsRef = useRef(new Set())
-  const fireProductFunnelCheckin = useCallback((level) => {
-    if (checkedInLevelsRef.current.has(level)) return
-    checkedInLevelsRef.current.add(level)
-    narrative.play('product_funnel_checkin', {}, (value) => {
-      // The completion callback here fires once the player has actually
-      // tapped through the response line (see useCompanionNarrative's
-      // advance()) -- not on a blind timer -- so the Onboard CTA appears
-      // right after they've read it, whichever of the four options they picked.
-      narrative.play(`product_funnel_response_${value}`, {}, () => {
-        setShowOnboardCta(true)
-      })
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Fires the level-up animation whenever the player's level actually
   // increases during THIS session — not on initial load (so returning
@@ -812,7 +997,7 @@ export default function GamePage() {
         levelStartHintsRef.current = hintScrollsRef.current
 
         setTimeout(() => {
-          queueBadge({
+          startMayorHandoff({
             id: `title_level_${currentLevel}`,
             title: 'Budget Boss',
             subtitle: 'Always knows where the money goes.',
@@ -823,6 +1008,11 @@ export default function GamePage() {
               trustPercent,
               coins: coinsAtBadgeTime,
             },
+            // Read by closeBadge() below -- the funnel question fires once
+            // THIS badge is actually dismissed (skip or publish), not on a
+            // fixed timer that could pop up mid-badge or race the mayor
+            // cutscene. See closeBadge for the other half of this.
+            funnelLevel: currentLevel,
           })
         }, 3400)
       }
@@ -830,8 +1020,13 @@ export default function GamePage() {
       // voice, separate beat, only ever shown once per player.
       storyNarrator.playOnce(`level_${currentLevel}_start`)
       // Companion's genuine check-in — waits so it never overlaps the
-      // level-transition line above; only once per level.
-      setTimeout(() => fireProductFunnelCheckin(currentLevel), 9000)
+      // level-transition line above; only once per level. Only fires on
+      // this flat timer when there's NO badge this level (currentLevel !==
+      // 2) -- when there IS one, closeBadge() fires it instead, right
+      // after the badge is actually dismissed, so the two never overlap.
+      if (currentLevel !== 2) {
+        setTimeout(() => fireProductFunnelCheckin(currentLevel), 9000)
+      }
     }
     previousLevelRef.current = currentLevel
     previousTitleRef.current = currentTitle
@@ -841,7 +1036,7 @@ export default function GamePage() {
     // very first render. Reading it inside the callback body (rather than
     // in this array) is safe -- effects only run after the full render
     // (including totalCoins's own declaration) has completed.
-  }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin, queueBadge])
+  }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin, startMayorHandoff])
 
   useEffect(() => {
     if (!levelUpInfo) return
@@ -1207,11 +1402,24 @@ export default function GamePage() {
   // fixed fractional points through the road list (20%/50%/80%) instead
   // of the wandering-NPC spread formula, since there are always exactly
   // 3 of these regardless of how many background avatars exist.
-  const FIXED_STORY_NPCS = useMemo(() => ([
-    { id: 'arjun', name: 'Arjun', portrait: npcPortrait1, greetingBeat: 'npc_greeting_arjun', bodyUrl: AVATARS[0]?.url, fraction: 0.2 },
-    { id: 'riya', name: 'Riya', portrait: npcPortrait2, greetingBeat: 'npc_greeting_riya', bodyUrl: AVATARS[1]?.url, fraction: 0.5 },
-    { id: 'meera', name: 'Meera', portrait: npcPortrait3, greetingBeat: 'npc_greeting_meera', bodyUrl: AVATARS[2]?.url, fraction: 0.8 },
-  ]), [])
+  //
+  // Body models come from `backgroundNpcAvatars` (the AVATARS pool minus
+  // whichever one the PLAYER picked) rather than hardcoded AVATARS[0/1/2]
+  // -- the old hardcoded version meant a player who picked avatar_1,
+  // avatar_2, or avatar_3 for themselves would run into Arjun/Riya/Meera
+  // wearing their own exact body model, with nothing distinguishing
+  // "that's an NPC" from "that's my own character" at a glance. Also
+  // excludes avatar_6 (reserved for the Mayor, see MAYOR_AVATAR_URL) so
+  // a story NPC never doubles as the Mayor's look either.
+  const FIXED_STORY_NPCS = useMemo(() => {
+    const pool = backgroundNpcAvatars.filter((a) => a.id !== 'avatar_6')
+    return [
+      { id: 'arjun', name: 'Arjun', portrait: npcPortrait1, greetingBeat: 'npc_greeting_arjun', bodyUrl: pool[0]?.url, fraction: 0.2 },
+      { id: 'riya', name: 'Riya', portrait: npcPortrait2, greetingBeat: 'npc_greeting_riya', bodyUrl: pool[1]?.url, fraction: 0.5 },
+      { id: 'meera', name: 'Meera', portrait: npcPortrait3, greetingBeat: 'npc_greeting_meera', bodyUrl: pool[2]?.url, fraction: 0.8 },
+    ]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backgroundNpcAvatars])
 
   // Minimum distance an NPC's spawn point must keep from any building's
   // center. Bumped up from the first attempt at this fix (7 -> 12) --
@@ -1870,6 +2078,23 @@ export default function GamePage() {
     }
     if (hasRewardedAdvisoryRef.current) return
     hasRewardedAdvisoryRef.current = true
+
+    // The actual simulated financial decision + the timing/hesitation
+    // signal around it -- this used to only live in useAdvisoryConversation's
+    // React state and vanish on close(). Fire-and-forget, same pattern as
+    // every other emitTelemetry call site (never blocks/awaits gameplay).
+    emitTelemetry(profile.email, {
+      type: 'advisory_choice',
+      payload: {
+        npc_id: advisoryConversation.npcId,
+        choice_value: advisoryConversation.analytics.choiceValue,
+        decision_time_ms: advisoryConversation.analytics.decisionTimeMs,
+        total_conversation_ms: advisoryConversation.analytics.totalConversationMs,
+        reversed_count: advisoryConversation.analytics.reversedCount,
+        robot_hint_used: advisoryConversation.analytics.robotHintUsed,
+        level: currentLevel,
+      },
+    })
 
     addBond(BOND_REWARDS.quest)
     playSuccessSound()
@@ -2744,6 +2969,9 @@ export default function GamePage() {
         <LoadingScreen
           isReady={assetsReady}
           onEnter={() => setHasEnteredGame(true)}
+          playIntroSting={playIntroSting}
+          startAmbience={startAmbience}
+          stopAmbience={stopAmbience}
         />
       )}
 
@@ -2826,18 +3054,39 @@ export default function GamePage() {
         />
       )}
 
-      {showOnboardCta && (
-        <div className="onboard-cta-dock">
-          <button className="onboard-cta-btn" onClick={handleOnboardClick}>
-            Continue to Onboarding →
-          </button>
-          <button
-            className="onboard-cta-dismiss"
-            onClick={() => setShowOnboardCta(false)}
-            aria-label="Dismiss"
-          >
-            ✕
-          </button>
+      {funnelPrompt && (
+        <div className="funnel-panel">
+          {funnelPrompt === 'asking' && (
+            <>
+              <p className="funnel-panel-text">
+                Real talk — ever thought about actually opening a savings account, instead of just holding onto cash?
+              </p>
+              <div className="funnel-panel-actions">
+                <button className="funnel-panel-btn funnel-panel-btn--primary" onClick={handleFunnelYes}>
+                  🏦 Yeah, tell me more
+                </button>
+                <button className="funnel-panel-btn funnel-panel-btn--secondary" onClick={handleFunnelDecline}>
+                  Not now
+                </button>
+              </div>
+            </>
+          )}
+          {funnelPrompt === 'yes' && (
+            <>
+              <p className="funnel-panel-text">Good call — takes two minutes. Let's get you set up.</p>
+              <div className="funnel-panel-actions">
+                <button className="funnel-panel-btn funnel-panel-btn--primary" onClick={handleOnboardClick}>
+                  Continue to Onboarding →
+                </button>
+                <button className="funnel-panel-btn funnel-panel-btn--secondary" onClick={() => setFunnelPrompt(null)}>
+                  Not now
+                </button>
+              </div>
+            </>
+          )}
+          {funnelPrompt === 'declined' && (
+            <p className="funnel-panel-text">Totally fine. I'll drop it — for now.</p>
+          )}
         </div>
       )}
 
@@ -2903,7 +3152,19 @@ export default function GamePage() {
               questState={questState}
               avatarUrl={selectedAvatar.url} 
               onPositionChange={handlePositionChange}
-              movementLocked={false}
+              movementLocked={!!mayorHandoff}
+              scriptedWalkTarget={mayorHandoff && !mayorHandoff.playerArrived ? mayorHandoff.playerTo : null}
+              teleportTo={mayorHandoff ? mayorHandoff.playerFrom : null}
+              onScriptedArrive={() => setMayorHandoff((h) => (h ? { ...h, playerArrived: true } : h))}
+            />
+          )}
+          {mayorHandoff && MAYOR_AVATAR_URL && (
+            <WalkingCameo
+              avatarUrl={MAYOR_AVATAR_URL}
+              from={mayorHandoff.mayorFrom}
+              to={mayorHandoff.mayorTo}
+              faceTowards={mayorHandoff.playerTo}
+              onArrive={() => setMayorHandoff((h) => (h ? { ...h, mayorArrived: true } : h))}
             />
           )}
           {layout && (
@@ -3027,6 +3288,7 @@ export default function GamePage() {
 
           {layout &&
             npcSpawnPoints.length > 0 &&
+            !mayorHandoff &&
             backgroundNpcAvatars.map((avatar, i) => (
               <WanderingNPC
                 key={avatar.id}
@@ -3039,6 +3301,7 @@ export default function GamePage() {
             ))}
 
           {layout &&
+            !mayorHandoff &&
             FIXED_STORY_NPCS.map((npc, i) => {
               const pos = fixedStoryNpcPositions[npc.id]
               if (!pos || !npc.bodyUrl) return null
