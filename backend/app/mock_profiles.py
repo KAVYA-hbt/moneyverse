@@ -15,6 +15,38 @@ from datetime import datetime, timedelta
 SEGMENT_TAGS_POOL = ["saver", "risk_averse", "impulsive_spender", "goal_oriented", "credit_naive"]
 TRAIT_TAGS_POOL = ["cautious_planner", "thrill_seeker", "advice_dependent", "loss_averse", "present_biased"]
 
+# Used to give mock players Indian names instead of "mock_player_N" so the
+# admin dashboard reads more like real test users. Deliberately a mixed
+# pool (not gendered lists paired 1:1) so first/last combinations don't
+# read as a fixed template when scanned as a list.
+INDIAN_FIRST_NAMES = [
+    "Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Krishna",
+    "Ishaan", "Rohan", "Kabir", "Ananya", "Diya", "Priya", "Ishita", "Saanvi",
+    "Aadhya", "Kavya", "Myra", "Anika", "Riya", "Neha", "Pooja", "Sneha",
+    "Rahul", "Amit", "Vikram", "Suresh", "Ramesh", "Sanjay", "Karthik", "Deepak",
+    "Meera", "Lakshmi", "Divya", "Nikhil", "Varun", "Aryan", "Siddharth", "Tanvi",
+]
+INDIAN_LAST_NAMES = [
+    "Sharma", "Verma", "Gupta", "Iyer", "Nair", "Reddy", "Rao", "Patel",
+    "Mehta", "Shah", "Kapoor", "Chopra", "Malhotra", "Bose", "Banerjee", "Das",
+    "Menon", "Pillai", "Joshi", "Desai", "Agarwal", "Bhatt", "Chatterjee", "Mukherjee",
+]
+
+
+def mock_indian_name(index: int) -> tuple[str, str]:
+    """Deterministic per-index pick (seeded on `index`, not the shared
+    `random` module) so the SAME index always maps to the SAME name across
+    a single response, regardless of what other random calls happened
+    before or after it for that player's scores. Doesn't guarantee global
+    uniqueness across all 200 possible mock players (40 x 24 = 960
+    combinations, so collisions are rare but possible past ~30-40
+    players) -- callers appending the index to the derived email already
+    guarantee a unique identifier even if two players share a name, the
+    same way two real people can share a name in any real dataset.
+    """
+    rnd = random.Random(index)
+    return rnd.choice(INDIAN_FIRST_NAMES), rnd.choice(INDIAN_LAST_NAMES)
+
 
 def _r(lo, hi):
     return round(random.uniform(lo, hi), 1)

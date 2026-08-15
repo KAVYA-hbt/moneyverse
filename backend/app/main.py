@@ -437,17 +437,16 @@ def get_mock_profiles(count: int = 10):
     enough real players exist. Every record carries "synthetic": true —
     the dashboard must never render these without that flag visible."""
     count = max(1, min(count, 200))
-    return {
-        "count": count,
-        "players": [
-            {
-                "email": f"mock_player_{i}@example.test",
-                "financial_behavior": mock_profiles.mock_financial_profile(),
-                "psychometric": mock_profiles.mock_behavioral_profile(),
-            }
-            for i in range(count)
-        ],
-    }
+    players = []
+    for i in range(count):
+        first, last = mock_profiles.mock_indian_name(i)
+        players.append({
+            "email": f"{first.lower()}.{last.lower()}{i}@example.test",
+            "name": f"{first} {last}",
+            "financial_behavior": mock_profiles.mock_financial_profile(),
+            "psychometric": mock_profiles.mock_behavioral_profile(),
+        })
+    return {"count": count, "players": players}
 
 
 @app.post("/api/player/{email}/scenario")
