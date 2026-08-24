@@ -4,11 +4,19 @@ services:
     container_name: finguru_admin_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: finguru
-      POSTGRES_PASSWORD: finguru
-      POSTGRES_DB: finguru_admin
+      # Pulled from this directory's own .env (already used by the FastAPI
+      # app itself, and already gitignored) -- Docker Compose loads it
+      # automatically since it sits next to this file. Only placeholder
+      # values ever live in this file, so it stays safe to commit/publish.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      # Bound to localhost only -- the previous "5432:5432" (no IP prefix)
+      # binds to every network interface by default, meaning this database
+      # would be reachable from anywhere on the same network, not just this
+      # machine, if the host firewall ever allowed it through.
+      - "127.0.0.1:5432:5432"
     volumes:
       - finguru_admin_pgdata:/var/lib/postgresql/data
 

@@ -4,9 +4,13 @@ services:
     container_name: moneyverse-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: moneyverse
-      POSTGRES_PASSWORD: moneyverse
-      POSTGRES_DB: moneyverse
+      # Pulled from a .env file sitting next to this docker-compose.yml
+      # (Docker Compose loads it automatically -- no flags needed). That
+      # .env is gitignored; only placeholder values ever live in this
+      # file, so this file itself stays safe to commit/publish.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
@@ -17,8 +21,8 @@ services:
     container_name: moneyverse-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@moneyverse.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "5050:80"
     depends_on:
