@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import MiniGameShell from './MiniGameShell.jsx'
+import { useLanguage } from '../../../i18n/LanguageContext.jsx'
 
 const DEFAULT_ICONS = ['🍎', '🍕', '🍔', '🍩', '🍰', '🍉']
 const MISMATCH_DELAY_MS = 700
@@ -18,6 +19,7 @@ export default function MemoryMatchGame({
   onClose,
   onComplete, // (result: { success: boolean, moves: number }) => void
 }) {
+  const { t } = useLanguage()
   const deck = useMemo(() => {
     const pairs = icons.flatMap((icon, i) => [
       { id: `${i}-a`, icon },
@@ -34,9 +36,9 @@ export default function MemoryMatchGame({
 
   useEffect(() => {
     if (matchedIcons.size === icons.length && icons.length > 0) {
-      setResult({ success: true, message: `Matched everything in ${moves} moves!` })
+      setResult({ success: true, message: t('minigames.memoryMatchResult', { moves }) })
     }
-  }, [matchedIcons, icons.length, moves])
+  }, [matchedIcons, icons.length, moves, t])
 
   const handleCardClick = (card) => {
     if (lockRef.current) return
@@ -75,11 +77,24 @@ export default function MemoryMatchGame({
     onClose?.()
   }
 
+  // Bails out right now instead of forcing a full clear -- banks whatever
+  // pairs are already matched as a completed (but reduced-reward, see
+  // GamePage.jsx's onReward) task rather than an outright loss.
+  const handleFinishEarly = () => {
+    setResult({
+      success: true,
+      skipped: true,
+      moves,
+      message: t('minigames.memoryMatchPartial', { matched: matchedIcons.size, total: icons.length }),
+    })
+  }
+
   return (
     <MiniGameShell
-      title="Memory Match"
-      instructions="Flip two cards at a time and find every matching pair."
+      title={t('minigames.memoryMatchLabel')}
+      instructions={t('minigames.memoryMatchInstructions')}
       onClose={handleFinalClose}
+      onFinish={handleFinishEarly}
       result={result}
     >
       <div className="mm-grid">
@@ -97,7 +112,7 @@ export default function MemoryMatchGame({
           )
         })}
       </div>
-      <p className="mm-stats">Moves: {moves}</p>
+      <p className="mm-stats">{t('minigames.memoryMatchStats', { n: moves })}</p>
     </MiniGameShell>
   )
 }

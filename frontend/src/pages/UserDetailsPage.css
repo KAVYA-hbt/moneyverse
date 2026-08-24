@@ -187,6 +187,31 @@ body,
   flex-shrink: 0;
 }
 
+.details__language-picker {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.details__language-btn {
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--ink);
+  font-family: 'Sora', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.details__language-btn--active {
+  background: #1e8bff;
+  border-color: #1e8bff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
 .avatar-stage {
   position: relative;
   width: 100%;

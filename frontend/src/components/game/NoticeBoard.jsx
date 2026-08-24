@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './NoticeBoard.css'
 
 /**
@@ -11,12 +12,13 @@ import './NoticeBoard.css'
  * get a Pin button.
  */
 export default function NoticeBoard({ notices, isOpen, onToggle, progressPct, pinnedTaskId, onPin, showArrow }) {
+  const { t } = useLanguage()
   return (
     <>
       <div className="nb-trigger-wrapper">
         {showArrow && (
           <div className="nb-attention-arrow" aria-hidden="true">
-            <span>Check here</span>
+            <span>{t('noticeboard.checkHere')}</span>
             <div className="nb-attention-arrow-glyph">↓</div>
           </div>
         )}
@@ -26,7 +28,7 @@ export default function NoticeBoard({ notices, isOpen, onToggle, progressPct, pi
               <span key={n.id} className={`nb-trigger-pin nb-trigger-pin--${i % 4}`} />
             ))}
           </div>
-          <span className="nb-trigger-label">📌 Notice Board</span>
+          <span className="nb-trigger-label">{t('noticeboard.trigger')}</span>
         </button>
       </div>
 
@@ -34,7 +36,7 @@ export default function NoticeBoard({ notices, isOpen, onToggle, progressPct, pi
         <div className="nb-overlay" onClick={onToggle}>
           <div className="nb-board" onClick={(e) => e.stopPropagation()}>
             <div className="nb-board-header">
-              <h3>Notice Board</h3>
+              <h3>{t('noticeboard.title')}</h3>
               <button className="nb-close-btn" onClick={onToggle}>✕</button>
             </div>
 
@@ -61,7 +63,7 @@ export default function NoticeBoard({ notices, isOpen, onToggle, progressPct, pi
                     <span className="nb-card-title">{notice.title}</span>
                     <p className={`nb-card-flow ${notice.handClass || ''}`}>{notice.flow}</p>
 
-                    {notice.done && <span className="nb-card-done-tag">✓ Done</span>}
+                    {notice.done && <span className="nb-card-done-tag">{t('noticeboard.done')}</span>}
                     {isPinned && <span className="nb-card-pin-tag">📍</span>}
 
                     {notice.pinPosition && !notice.done && (
@@ -69,7 +71,7 @@ export default function NoticeBoard({ notices, isOpen, onToggle, progressPct, pi
                         className={`nb-card-pin-btn ${isPinned ? 'nb-card-pin-btn--active' : ''}`}
                         onClick={(e) => { e.stopPropagation(); onPin(notice.id) }}
                       >
-                        {isPinned ? '📍 Pinned -- tap to unpin' : '📍 Pin on map'}
+                        {isPinned ? t('noticeboard.pinnedUnpin') : t('noticeboard.pinOnMap')}
                       </button>
                     )}
                   </div>

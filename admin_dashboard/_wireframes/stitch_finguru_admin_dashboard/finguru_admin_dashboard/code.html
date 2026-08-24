@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-container": "#006f64",
+                      "primary": "#070235",
+                      "inverse-on-surface": "#eff1f3",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "secondary-fixed": "#71f8e4",
+                      "on-surface": "#191c1e",
+                      "surface-container": "#eceef0",
+                      "secondary-fixed-dim": "#4fdbc8",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed-variant": "#005048",
+                      "background": "#f7f9fb",
+                      "on-primary-container": "#8683ba",
+                      "on-surface-variant": "#47464f",
+                      "on-background": "#191c1e",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#2a1700",
+                      "surface-container-high": "#e6e8ea",
+                      "surface-variant": "#e0e3e5",
+                      "secondary-container": "#6df5e1",
+                      "surface-bright": "#f7f9fb",
+                      "inverse-primary": "#c4c1fb",
+                      "on-tertiary-container": "#c07a00",
+                      "surface-tint": "#5b598c",
+                      "tertiary-container": "#331d00",
+                      "on-primary-fixed": "#181445",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#e3dfff",
+                      "inverse-surface": "#2d3133",
+                      "on-primary-fixed-variant": "#444173",
+                      "secondary": "#006b5f",
+                      "tertiary": "#140900",
+                      "outline": "#787680",
+                      "primary-container": "#1e1b4b",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "surface-container-highest": "#e0e3e5",
+                      "surface-dim": "#d8dadc",
+                      "surface-container-low": "#f2f4f6",
+                      "on-secondary-fixed": "#00201c",
+                      "surface": "#f7f9fb",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "on-error-container": "#93000a",
+                      "outline-variant": "#c8c5d0",
+                      "on-primary": "#ffffff",
+                      "primary-fixed-dim": "#c4c1fb",
+                      "tertiary-fixed": "#ffddb8"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "container-max": "1440px",
+                      "sm": "8px",
+                      "lg": "24px",
+                      "gutter": "24px",
+                      "xs": "4px",
+                      "xl": "32px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "title-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "title-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "display-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "title-lg": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "title-md": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body {
+            background-color: #f7f9fb;
+            color: #191c1e;
+        }
+        .ambient-shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .ambient-shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen bg-background">
+<!-- TopAppBar -->
+<header class="bg-surface border-b border-outline-variant w-full sticky top-0 z-50 flex justify-between items-center px-md py-sm shadow-sm md:px-lg md:py-md mx-auto max-w-container-max">
+<div class="flex items-center gap-sm md:gap-md">
+<button class="text-on-surface-variant hover:text-primary transition-all duration-200 cursor-pointer active:scale-95 duration-150 p-xs" id="mobile-menu-btn">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary font-bold">Admin</h1>
+</div>
+<div class="flex items-center gap-sm md:gap-md">
+<!-- Search Bar (Hidden on Mobile, placeholder for desktop) -->
+<div class="hidden md:flex relative mr-sm">
+<input class="bg-surface-container-lowest border border-outline-variant rounded-full py-xs px-md pl-xl focus:border-primary-container focus:ring-2 focus:ring-inverse-primary text-body-md w-[200px] outline-none" placeholder="Search..." type="text"/>
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-all duration-200 cursor-pointer p-xs relative">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="absolute top-0 right-0 w-[8px] h-[8px] bg-error rounded-full"></span>
+</button>
+<div class="flex items-center gap-xs ml-xs md:ml-sm">
+<div class="hidden md:flex flex-col items-end mr-xs">
+<span class="font-label-md text-label-md text-on-surface">Admin User Profile</span>
+<span class="font-label-md text-[10px] text-on-secondary-container bg-secondary-container px-xs py-[2px] rounded-sm">Tier 1 Admin</span>
+</div>
+<img alt="Admin Avatar" class="w-[32px] h-[32px] rounded-full object-cover border border-outline-variant" data-alt="A small, professional circular avatar portrait of a business administrator in a modern light-mode setting. Deep indigo tones subtly reflecting in the background. Highly detailed, clean corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFOjtRXePxYzheWWhK2hQYPwJ7TQVZuZ-JHpREuADEMIBP5Mwdn-mB1u4UbBIr5PrTv3hNj6ulHvrpujG-daS4YSM3-1zpyXPIE4iucfY94DVecJ6JJR0nZ45GVCRHXuq9aIVQP4Av47eJPP6SsqTGZwI0FWw9k6z0zc23U3qG1CZzd8WHZ6nM7IMUo_ktHX58B3MDGr5dS2Gr3oWMFbBC1dNTyBSI3ftdnmOXwnTKHj1JYbBEoIeP"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 relative overflow-hidden">
+<!-- NavigationDrawer (Mobile Hidden, Desktop Fixed sidebar concept adapted for mobile overlay in JS later if needed, showing as sidebar for responsive demo) -->
+<nav class="bg-surface h-[calc(100vh-64px)] w-[260px] fixed md:sticky left-0 top-[64px] border-r border-outline-variant shadow-sm z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col py-lg px-md" id="sidebar">
+<div class="mb-lg px-xs">
+<div class="flex items-center gap-sm mb-xs">
+<img alt="Admin Avatar" class="w-[40px] h-[40px] rounded-full object-cover border border-outline-variant" data-alt="A small, professional circular avatar portrait of a business administrator in a modern light-mode setting. Deep indigo tones subtly reflecting in the background. Highly detailed, clean corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRlpku_8edyM1MmRfKTTUH0zT9GO9TQHLf9fG5AjHW2_Gxri9kfmmRv-FS1gJTQgDFAPpeHMMymxaasj3Ld1EaMTo3v1WcyeviUaJhR71LsLf7aSzwxI_zct8Bx2lw6Dj0irm0RRiFqkC467n39u-9aSk-BWxUcgdT8aijknFMzh2mpB1ob8tW2quAMCQeLNDcN0InUKsfPpK7GBSu30CUflt4LtwfS2kTNLXjxBDL0G2qIv5SZM-W"/>
+<div>
+<div class="font-title-md text-title-md text-on-surface">FinGuru Admin</div>
+<div class="font-label-md text-label-md text-on-surface-variant">Tier 1 Admin</div>
+</div>
+</div>
+<div class="flex items-center gap-xs font-label-md text-[10px] text-secondary mt-xs">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Online
+                </div>
+</div>
+<ul class="flex flex-col gap-xs flex-1">
+<li>
+<a class="flex items-center gap-md bg-secondary-container text-on-secondary-container rounded-lg p-md cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-body-md text-body-md font-semibold">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-on-surface-variant p-md hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">person_search</span>
+<span class="font-body-md text-body-md">Player Profiles</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-on-surface-variant p-md hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg justify-between" href="#">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-error">assignment_late</span>
+<span class="font-body-md text-body-md">Hand-off Queue</span>
+</div>
+<span class="bg-error text-on-error font-label-md text-[10px] px-xs py-[2px] rounded-full">5</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-outline p-md rounded-lg pointer-events-none opacity-50" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md text-body-md">Cohort Analytics</span>
+</a>
+</li>
+<li class="mt-auto">
+<a class="flex items-center gap-md text-on-surface-variant p-md hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Mobile Overlay for Sidebar -->
+<div class="fixed inset-0 bg-on-surface/20 z-30 hidden md:hidden" id="mobile-overlay"></div>
+<!-- Main Content -->
+<main class="flex-1 p-md md:p-lg md:ml-[0px] w-full overflow-y-auto">
+<div class="max-w-[1000px] mx-auto">
+<header class="mb-lg">
+<h2 class="font-headline-md text-headline-md text-primary">Welcome, Admin</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Here is the latest overview of the platform status.</p>
+</header>
+<!-- Stat Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md mb-xl">
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant ambient-shadow-sm flex flex-col justify-between hover:ambient-shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Active Players</span>
+<span class="material-symbols-outlined text-primary-container">groups</span>
+</div>
+<div class="font-display-lg text-display-lg text-primary">12,450</div>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant ambient-shadow-sm flex flex-col justify-between hover:ambient-shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Open Hand-off Cases</span>
+<span class="material-symbols-outlined text-primary-container">assignment</span>
+</div>
+<div class="font-display-lg text-display-lg text-primary">34</div>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant ambient-shadow-sm flex flex-col justify-between hover:ambient-shadow-md transition-shadow border-l-4 border-l-[#f59e0b]">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Profile Mismatches</span>
+<span class="material-symbols-outlined text-[#f59e0b]">warning</span>
+</div>
+<div class="font-display-lg text-display-lg text-[#b45309]">8</div>
+</div>
+</div>
+<!-- Empty State -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl flex flex-col items-center justify-center min-h-[300px] text-center ambient-shadow-sm">
+<div class="w-[120px] h-[120px] mb-lg bg-surface-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-[64px] text-on-surface-variant opacity-50">check_circle</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs">No pending actions</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[400px]">The hand-off queue is currently clear. Any new escalations or mismatches will appear here.</p>
+</div>
+</div>
+</main>
+</div>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+
+            function toggleMenu() {
+                const isClosed = sidebar.classList.contains('-translate-x-full');
+                if (isClosed) {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            }
+
+            menuBtn.addEventListener('click', toggleMenu);
+            overlay.addEventListener('click', toggleMenu);
+        });
+    </script>
+</body></html>

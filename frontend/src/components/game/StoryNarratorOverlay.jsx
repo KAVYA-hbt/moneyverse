@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './StoryNarratorOverlay.css'
 
 /**
@@ -8,6 +9,7 @@ import './StoryNarratorOverlay.css'
  * alone, not just styling.
  */
 export default function StoryNarratorOverlay({ narrator }) {
+  const { t } = useLanguage()
   if (!narrator.isActive) return null
 
   return (
@@ -18,7 +20,7 @@ export default function StoryNarratorOverlay({ narrator }) {
         <div className="sno-body">
           <p className="sno-line">{narrator.currentLine}</p>
           <button className="sno-advance-btn" onClick={narrator.advance}>
-            {narrator.hasMoreLines ? 'Next' : 'Close'}
+            {narrator.hasMoreLines ? t('storyNarrator.next') : t('storyNarrator.close')}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MiniGameShell from './MiniGameShell.jsx'
+import { useLanguage } from '../../../i18n/LanguageContext.jsx'
 
 const ICON_POOL = ['🍎', '🍕', '🍔', '🍩', '🍰', '🍉', '🥐', '🍪', '🍇', '🍒']
 const ROUNDS_TO_WIN = 5
@@ -25,6 +26,7 @@ function buildRound(round) {
 }
 
 export default function QuickSortGame({ onClose, onComplete }) {
+  const { t } = useLanguage()
   const [round, setRound] = useState(1)
   const [roundData, setRoundData] = useState(() => buildRound(1))
   const [lives, setLives] = useState(STARTING_LIVES)
@@ -65,7 +67,7 @@ export default function QuickSortGame({ onClose, onComplete }) {
       const next = prev - 1
       if (next <= 0) {
         clearInterval(intervalRef.current)
-        setResult({ success: false, message: "Ran out of tries — no worries, plenty more chances around the city." })
+        setResult({ success: false, message: t('minigames.quickSortFail') })
       } else {
         const nextRoundData = buildRound(round) // retry with a fresh layout, same round number
         setRoundData(nextRoundData)
@@ -81,7 +83,7 @@ export default function QuickSortGame({ onClose, onComplete }) {
     if (icon === roundData.target) {
       if (round >= ROUNDS_TO_WIN) {
         clearInterval(intervalRef.current)
-        setResult({ success: true, message: `Sharp eyes — ${ROUNDS_TO_WIN} for ${ROUNDS_TO_WIN}!` })
+        setResult({ success: true, message: t('minigames.quickSortWin', { n: ROUNDS_TO_WIN }) })
       } else {
         const nextRound = round + 1
         setRound(nextRound)
@@ -97,17 +99,31 @@ export default function QuickSortGame({ onClose, onComplete }) {
     onClose?.()
   }
 
+  // Banks whatever rounds they'd already cleared as a completed
+  // (reduced-reward) task instead of forcing all 5 rounds or a life-out.
+  const handleFinishEarly = () => {
+    clearInterval(intervalRef.current)
+    const roundsCleared = Math.max(0, round - 1)
+    setResult({
+      success: true,
+      skipped: true,
+      round: roundsCleared,
+      message: t('minigames.quickSortPartial', { round: roundsCleared, total: ROUNDS_TO_WIN }),
+    })
+  }
+
   const timerPct = Math.max(0, Math.round((timeLeft / ROUND_TIME_MS) * 100))
 
   return (
     <MiniGameShell
-      title="Quick Sort"
-      instructions="Tap the matching item before time runs out."
+      title={t('minigames.quickSortLabel')}
+      instructions={t('minigames.quickSortInstructions')}
       onClose={handleFinalClose}
+      onFinish={handleFinishEarly}
       result={result}
     >
       <div className="qs-target">
-        Find this: <span className="qs-target-icon">{roundData.target}</span>
+        {t('minigames.findThis')} <span className="qs-target-icon">{roundData.target}</span>
       </div>
 
       <div className="qs-timer-bar">
@@ -122,7 +138,7 @@ export default function QuickSortGame({ onClose, onComplete }) {
         ))}
       </div>
 
-      <p className="qs-lives">{'❤️'.repeat(lives)}{'🖤'.repeat(STARTING_LIVES - lives)} · Round {round}/{ROUNDS_TO_WIN}</p>
+      <p className="qs-lives">{'❤️'.repeat(lives)}{'🖤'.repeat(STARTING_LIVES - lives)} · {t('minigames.roundOf', { round, total: ROUNDS_TO_WIN })}</p>
     </MiniGameShell>
   )
 }

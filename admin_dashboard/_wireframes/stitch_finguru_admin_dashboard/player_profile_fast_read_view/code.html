@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Player Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#006b5f",
+                        "on-secondary-fixed-variant": "#005048",
+                        "on-primary-container": "#8683ba",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#47464f",
+                        "tertiary": "#140900",
+                        "on-secondary-container": "#006f64",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed": "#181445",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "tertiary-container": "#331d00",
+                        "secondary-container": "#6df5e1",
+                        "tertiary-fixed": "#ffddb8",
+                        "primary": "#070235",
+                        "primary-container": "#1e1b4b",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "primary-fixed-dim": "#c4c1fb",
+                        "surface-bright": "#f7f9fb",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#c07a00",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "surface-container": "#eceef0",
+                        "primary-fixed": "#e3dfff",
+                        "inverse-primary": "#c4c1fb",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#5b598c",
+                        "surface-container-highest": "#e0e3e5",
+                        "outline": "#787680",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "surface-dim": "#d8dadc",
+                        "on-surface": "#191c1e",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#00201c",
+                        "inverse-surface": "#2d3133",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e6e8ea",
+                        "outline-variant": "#c8c5d0",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#71f8e4",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#444173",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f2f4f6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "gutter": "24px",
+                        "xs": "4px",
+                        "container-max": "1440px",
+                        "base": "4px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "title-lg": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "title-md": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased overflow-hidden flex h-screen">
+<!-- NavigationDrawer (Shared Component) -->
+<aside aria-label="Sidebar Navigation" class="hidden md:flex flex-col bg-surface dark:bg-surface-container-low text-primary dark:text-primary-fixed border-r border-outline-variant dark:border-outline shadow-sm dark:shadow-none h-screen w-[260px] fixed left-0 top-0 z-40 py-lg px-md">
+<!-- Header Profile -->
+<div class="flex items-center gap-md mb-xl px-md">
+<div class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-title-lg text-title-lg">
+                FA
+            </div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Admin</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Tier 1 Admin • Online</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col gap-sm flex-1">
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant p-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a aria-current="page" class="flex items-center gap-md bg-secondary-container dark:bg-on-secondary-container text-on-secondary-container dark:text-secondary-fixed rounded-lg p-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined icon-fill">person_search</span>
+<span class="font-label-md text-label-md">Player Profiles</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant p-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">assignment_late</span>
+<span class="font-label-md text-label-md">Hand-off Queue</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant p-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md text-label-md">Cohort Analytics</span>
+</a>
+</nav>
+<div class="mt-auto">
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant p-md hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors cursor-pointer active:scale-95 duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col md:ml-[260px] h-screen overflow-hidden">
+<!-- TopAppBar (Shared Component) -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline w-full sticky top-0 z-30 px-lg py-md transition-all duration-200 flex justify-between items-center h-16">
+<div class="flex items-center gap-md">
+<button aria-label="Open Menu" class="md:hidden text-on-surface-variant hover:text-primary transition-colors focus:outline-none">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg text-primary dark:text-on-primary-fixed-variant">Admin</h1>
+</div>
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-md text-label-md cursor-pointer border border-outline-variant" title="Admin User Profile">
+                    A
+                </div>
+</div>
+</header>
+<!-- Page Content Canvas -->
+<main class="flex-1 overflow-y-auto bg-surface-lowest">
+<div class="max-w-container-max mx-auto px-md md:px-lg py-lg md:py-xl">
+<!-- Player Header Section -->
+<section class="flex flex-col md:flex-row md:items-center gap-md mb-lg">
+<div class="w-16 h-16 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center text-on-surface-variant font-headline-md text-headline-md shadow-sm">
+                        AS
+                    </div>
+<div>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Aarav Sharma</h2>
+<div class="flex flex-wrap gap-sm mt-xs">
+<span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md border border-surface-variant">Saver</span>
+<span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md border border-surface-variant">Risk-Averse</span>
+</div>
+</div>
+</section>
+<!-- AI Summary Callout -->
+<section class="bg-primary-fixed text-on-primary-fixed-variant p-lg rounded-xl border border-primary-fixed-dim shadow-sm mb-xl">
+<div class="flex items-start gap-md">
+<span class="material-symbols-outlined text-primary mt-1">smart_toy</span>
+<div class="flex-1">
+<p class="font-title-md text-title-md leading-relaxed">
+                                Risk-averse saver, recently asked about crypto — possible mismatch. No prior complaints.
+                            </p>
+<button class="mt-md flex items-center gap-xs text-primary font-label-md text-label-md hover:underline focus:outline-none transition-all" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.chevron').classList.toggle('rotate-180')">
+                                Based on
+                                <span class="material-symbols-outlined text-[18px] chevron transition-transform duration-200">expand_more</span>
+</button>
+<div class="hidden mt-sm p-sm bg-surface-container-lowest rounded border border-outline-variant font-body-md text-body-md text-on-surface-variant">
+<ul>
+<li class="flex items-start gap-sm mb-xs"><span class="material-symbols-outlined text-[16px] mt-[2px]">chat</span> Chat logs show repeated inquiries about "safe high yield" until today's session on "Bitcoin ETF risks".</li>
+<li class="flex items-start gap-sm"><span class="material-symbols-outlined text-[16px] mt-[2px]">account_balance</span> Current portfolio is 90% fixed income, aligned with onboarding survey.</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<!-- Visual Flag Badges -->
+<section class="flex flex-wrap gap-md mb-xl">
+<div class="flex items-center gap-sm bg-tertiary-fixed text-on-tertiary-fixed-variant px-md py-sm rounded-lg border border-tertiary-fixed-dim shadow-sm">
+<span class="material-symbols-outlined icon-fill">warning</span>
+<span class="font-title-md text-title-md">Mismatch Flag</span>
+</div>
+<div class="flex items-center gap-sm bg-error-container text-on-error-container px-md py-sm rounded-lg border border-[#ffb4ab] shadow-sm">
+<span class="material-symbols-outlined icon-fill">error</span>
+<span class="font-title-md text-title-md">Distress Flag</span>
+</div>
+<div class="flex items-center gap-sm bg-surface-tint text-on-primary px-md py-sm rounded-lg border border-[#444173] shadow-sm">
+<span class="material-symbols-outlined icon-fill">gavel</span>
+<span class="font-title-md text-title-md">Compliance Flag</span>
+</div>
+</section>
+<!-- Side-by-Side Lists -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-lg mb-xl">
+<!-- Quests -->
+<div class="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-md flex items-center gap-sm border-b border-surface-container pb-sm">
+<span class="material-symbols-outlined text-on-surface-variant">sports_esports</span>
+                            Last 3 Quests
+                        </h3>
+<ul class="flex flex-col gap-md mt-md">
+<li class="flex items-center gap-md">
+<span class="material-symbols-outlined icon-fill text-secondary">check_circle</span>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface">Tax Filing Sim</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Completed Feb 20</span>
+</div>
+</li>
+<li class="flex items-center gap-md">
+<span class="material-symbols-outlined icon-fill text-secondary">check_circle</span>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface">Emergency Fund</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Completed Feb 15</span>
+</div>
+</li>
+<li class="flex items-center gap-md">
+<span class="material-symbols-outlined text-outline">radio_button_unchecked</span>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface">Budgeting Basics</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Started Feb 10</span>
+</div>
+</li>
+</ul>
+</div>
+<!-- Interactions -->
+<div class="bg-surface-container-lowest rounded-xl p-lg border border-outline-variant shadow-sm">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-md flex items-center gap-sm border-b border-surface-container pb-sm">
+<span class="material-symbols-outlined text-on-surface-variant">forum</span>
+                            Last 3 Interactions
+                        </h3>
+<ul class="flex flex-col gap-md mt-md">
+<li class="flex items-start gap-md">
+<div class="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface font-medium">Asked about Crypto</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Today • AI Chat</span>
+</div>
+</li>
+<li class="flex items-start gap-md">
+<div class="w-2 h-2 rounded-full bg-outline-variant mt-2 flex-shrink-0"></div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface">Requested PDF Statement</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Feb 18 • Self-Service</span>
+</div>
+</li>
+<li class="flex items-start gap-md">
+<div class="w-2 h-2 rounded-full bg-outline-variant mt-2 flex-shrink-0"></div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg text-on-surface">App Login</span>
+<span class="font-body-md text-body-md text-on-surface-variant">Feb 15 • Mobile App</span>
+</div>
+</li>
+</ul>
+</div>
+</section>
+<!-- Bottom Action -->
+<section class="flex justify-center mt-xl pb-xl">
+<button class="bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md px-xl py-md rounded-lg shadow-sm transition-all active:scale-95 flex items-center gap-sm">
+<span>See Full Profile</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</section>
+</div>
+</main>
+</div>
+</body></html>

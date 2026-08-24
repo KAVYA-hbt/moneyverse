@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { NARRATOR_BEATS } from '../data/narratorStory.js'
+import { getNarratorBeat } from '../data/narratorStory.js'
 
 function storageKey(sanitizedUser) {
   return `sbi_questcraft_narrator_seen_${sanitizedUser}`
@@ -34,13 +34,13 @@ function markBeatSeen(sanitizedUser, beatId) {
  * plays in full, one after another — none of them get silently dropped by
  * a later call overwriting an earlier one's state update.
  */
-export function useStoryNarrator(sanitizedUser) {
+export function useStoryNarrator(sanitizedUser, language = 'en') {
   const [activeBeatId, setActiveBeatId] = useState(null)
   const [lineIndex, setLineIndex] = useState(0)
   const queueRef = useRef([])
   const repeatableBeatIdsRef = useRef(new Set())
 
-  const beat = activeBeatId ? NARRATOR_BEATS[activeBeatId] : null
+  const beat = activeBeatId ? getNarratorBeat(activeBeatId, language) : null
   const lines = beat?.lines ?? []
   const hasMoreLines = lineIndex < lines.length - 1
 
@@ -62,7 +62,7 @@ export function useStoryNarrator(sanitizedUser) {
    *  page refresh mid-beat shows it again instead of silently losing it
    *  forever. */
   const playOnce = useCallback((beatId) => {
-    const targetBeat = NARRATOR_BEATS[beatId]
+    const targetBeat = getNarratorBeat(beatId, language)
     if (!targetBeat) {
       console.warn(`[useStoryNarrator] Unknown beat id: "${beatId}"`)
       return
@@ -88,14 +88,14 @@ export function useStoryNarrator(sanitizedUser) {
       queueRef.current.push(beatId)
       return current
     })
-  }, [sanitizedUser, activeBeatId])
+  }, [sanitizedUser, activeBeatId, language])
 
   /** Same queueing/display machinery as playOnce, but deliberately skips
    *  the "already seen" check entirely — for beats meant to repeat (e.g.
    *  "your companion's still waiting"), reusing the Narrator's exact
    *  visual voice instead of duplicating it elsewhere. */
   const playRepeatable = useCallback((beatId) => {
-    const targetBeat = NARRATOR_BEATS[beatId]
+    const targetBeat = getNarratorBeat(beatId, language)
     if (!targetBeat) {
       console.warn(`[useStoryNarrator] Unknown beat id: "${beatId}"`)
       return
@@ -117,7 +117,7 @@ export function useStoryNarrator(sanitizedUser) {
       queueRef.current.push(beatId)
       return current
     })
-  }, [sanitizedUser, activeBeatId])
+  }, [sanitizedUser, activeBeatId, language])
 
   const advance = useCallback(() => {
     setLineIndex((i) => {

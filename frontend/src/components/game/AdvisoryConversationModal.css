@@ -186,6 +186,26 @@
   border-bottom-right-radius: 4px;
 }
 
+/* The "...a few days later" narrator marker -- centered divider, not a
+   chat bubble from either party (see AdvisoryConversationModal.jsx). */
+.acm-time-skip {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+.acm-time-skip span {
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  color: #a9b4c9;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+
 /* The concluding takeaway -- floats ABOVE the chat panel's left edge,
    mirroring the robot dock on the right. It is NOT a chat bubble and
    never costs the player a tap: it simply appears the instant the real

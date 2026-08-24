@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MiniGameShell from './MiniGameShell.jsx'
+import { useLanguage } from '../../../i18n/LanguageContext.jsx'
 import './CashFlowCatch.css'
 
 const GOOD_ICONS = ['\ud83d\udcb0', '\ud83d\udcb5', '\ud83e\ude99', '\ud83d\udcb8']
@@ -38,6 +39,7 @@ function randomItem() {
  * pressure quiz like Quick Sort already covers.
  */
 export default function CashFlowCatchGame({ onClose, onComplete }) {
+  const { t } = useLanguage()
   const [items, setItems] = useState([])
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(STARTING_LIVES)
@@ -64,7 +66,7 @@ export default function CashFlowCatchGame({ onClose, onComplete }) {
       setLives((prev) => {
         const next = prev - 1
         if (next <= 0) {
-          endGame({ success: false, message: "Caught one too many bad ones -- no worries, plenty more chances around the city." })
+          endGame({ success: false, message: t('minigames.cashFlowCatchFail') })
         }
         return next
       })
@@ -72,12 +74,12 @@ export default function CashFlowCatchGame({ onClose, onComplete }) {
       setScore((prev) => {
         const next = prev + 1
         if (next >= TARGET_SCORE) {
-          endGame({ success: true, message: `Quick hands -- ${TARGET_SCORE} caught!` })
+          endGame({ success: true, message: t('minigames.cashFlowCatchWin', { n: TARGET_SCORE }) })
         }
         return next
       })
     }
-  }, [removeItem, endGame])
+  }, [removeItem, endGame, t])
 
   // Spawns a new falling item on a fixed interval, and separately lets
   // each item auto-expire (removed, no penalty either way) once its own
@@ -100,16 +102,27 @@ export default function CashFlowCatchGame({ onClose, onComplete }) {
     onClose?.()
   }
 
+  // Banks whatever's already been caught as a completed (reduced-reward)
+  // task instead of forcing them all the way to TARGET_SCORE or a life-out.
+  const handleFinishEarly = () => {
+    endGame({
+      success: true,
+      skipped: true,
+      message: t('minigames.cashFlowCatchPartial', { score, target: TARGET_SCORE }),
+    })
+  }
+
   return (
     <MiniGameShell
-      title="Cash Flow Catch"
-      instructions="Tap the savings falling down -- leave the debt alone."
+      title={t('minigames.cashFlowCatchLabel')}
+      instructions={t('minigames.cashFlowCatchInstructions')}
       onClose={handleFinalClose}
+      onFinish={handleFinishEarly}
       result={result}
     >
       <div className="cfc-stats">
         <span>{'\u2764\ufe0f'.repeat(Math.max(lives, 0))}{'\ud83e\udda8'.repeat(STARTING_LIVES - Math.max(lives, 0))}</span>
-        <span>Score {score}/{TARGET_SCORE}</span>
+        <span>{t('minigames.cashFlowCatchScore', { score, target: TARGET_SCORE })}</span>
       </div>
 
       <div className="cfc-field">

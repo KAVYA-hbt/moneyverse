@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './GuidePanel.css'
 
 /**
@@ -7,43 +8,44 @@ import './GuidePanel.css'
  * separate internal toggle affordance anymore.
  */
 export default function GuidePanel({ isOpen, onToggle }) {
+  const { t } = useLanguage()
   if (!isOpen) return null
 
   return (
     <div className="gp-panel">
       <div className="gp-header">
-        <span className="gp-header-title">Guide</span>
+        <span className="gp-header-title">{t('guide.title')}</span>
         <button className="gp-close-btn" onClick={onToggle}>✕</button>
       </div>
 
       <div className="gp-body">
         <div className="gp-section">
-          <p className="gp-section-title">👤 Your Profile</p>
-          <p className="gp-section-text">Top-left — tap it to see your profile or switch users.</p>
+          <p className="gp-section-title">{t('guide.profileTitle')}</p>
+          <p className="gp-section-text">{t('guide.profileText')}</p>
         </div>
 
         <div className="gp-section">
-          <p className="gp-section-title">📊 The Top Bar</p>
+          <p className="gp-section-title">{t('guide.topBarTitle')}</p>
           <p className="gp-section-text">
-            Scenario, level, coins, tasks, streak, freezers, hint scrolls, and Trust — all live, updating as you play.
+            {t('guide.topBarText')}
           </p>
         </div>
 
         <div className="gp-section">
-          <p className="gp-section-title">💻 On Computer</p>
+          <p className="gp-section-title">{t('guide.computerTitle')}</p>
           <ul className="gp-key-list">
-            <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
-            <li><kbd>E</kbd> Interact</li>
-            <li><kbd>Esc</kbd> Close a menu</li>
+            <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> {t('guide.move')}</li>
+            <li><kbd>E</kbd> {t('guide.interact')}</li>
+            <li><kbd>Esc</kbd> {t('guide.closeMenu')}</li>
           </ul>
         </div>
 
         <div className="gp-section">
-          <p className="gp-section-title">📱 On Mobile</p>
+          <p className="gp-section-title">{t('guide.mobileTitle')}</p>
           <ul className="gp-key-list">
-            <li>🕹️ Joystick (bottom-left) — Move</li>
-            <li>🎯 Button (bottom-right) — Interact</li>
-            <li>🗺️ Map & Tasks — toggle the info panel</li>
+            <li>🕹️ {t('guide.joystickText')}</li>
+            <li>🎯 {t('guide.buttonText')}</li>
+            <li>🗺️ {t('guide.mapText')}</li>
           </ul>
         </div>
       </div>

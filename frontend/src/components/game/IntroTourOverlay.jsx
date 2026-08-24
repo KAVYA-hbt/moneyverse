@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './IntroTourOverlay.css'
 
 const HIGHLIGHT_PADDING = 6
 
 export default function IntroTourOverlay({ tour }) {
+  const { t } = useLanguage()
   const [rect, setRect] = useState(null)
 
   useEffect(() => {
@@ -88,10 +90,10 @@ export default function IntroTourOverlay({ tour }) {
 
           <div className="it-actions">
             <button className="it-skip-btn" onClick={(e) => { e.stopPropagation(); tour.skip() }}>
-              Skip
+              {t('introTour.skip')}
             </button>
             <button className="it-next-btn" onClick={(e) => { e.stopPropagation(); tour.next() }}>
-              {tour.isTyping ? 'Show all' : tour.isLastStep ? "Let's go" : 'Next'}
+              {tour.isTyping ? t('introTour.showAll') : tour.isLastStep ? t('introTour.letsGo') : t('introTour.next')}
             </button>
           </div>
         </div>

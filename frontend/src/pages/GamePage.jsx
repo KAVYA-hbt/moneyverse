@@ -28,7 +28,9 @@ import { getLevelTaskProgress, saveLevelTaskProgress } from '../utils/levelTaskS
 import { useAdvisoryConversation } from '../hooks/useAdvisoryConversation.js'
 import AdvisoryConversationModal from '../components/game/AdvisoryConversationModal.jsx'
 import { QUEST_META } from '../data/questCatalog.js'
-import { pickAdvisoryTopicForLevel, LEVEL_CAPSTONE_QUESTS } from '../data/levelTasks.js'
+import { pickAdvisoryTopicForLevel, getLevelCapstoneQuests } from '../data/levelTasks.js'
+import { getAdvisoryScript } from '../data/advisoryScripts.js'
+import { useLanguage } from '../i18n/LanguageContext.jsx'
 import { syncPlayer, collectTreasureOnServer } from '../services/backendSync.js'
 import { getApiBaseUrl } from '../utils/apiBase.js'
 import { MobileControls } from '../components/game/MobileControls.jsx'
@@ -200,6 +202,7 @@ function QuestProximityManager({ playerPosRef, questState, onNearbyChange }) {
 export default function GamePage() {
   const { state } = useLocation()
   const navigate = useNavigate()
+  const { language, t, setLanguage } = useLanguage()
 
   const savedProfile = getUserProfile()
 
@@ -235,22 +238,11 @@ export default function GamePage() {
   }
 
   const [layout, setLayout] = useState(null)
-  // Guarantees the loading screen shows for at least this long even when the
-  // layout fetch resolves almost instantly (e.g. a fast local backend) —
-  // otherwise it can flash for a few milliseconds and be imperceptible.
-  // Only matters for a first-time player -- see hasEnteredGame below,
-  // which skips LoadingScreen (and therefore this timer) entirely for
-  // anyone who's already launched once before.
-  const [minLoadingTimeElapsed, setMinLoadingTimeElapsed] = useState(false)
-  useEffect(() => {
-    const timer = setTimeout(() => setMinLoadingTimeElapsed(true), 20000)
-    return () => clearTimeout(timer)
-  }, [])
-  // True only once the city layout has actually arrived AND the minimum
-  // crawl-watching time has passed. The intro button stays disabled until
-  // this flips true, so tapping it can never drop the player into the
-  // game page before loading is strictly finished.
-  const assetsReady = !!layout && minLoadingTimeElapsed
+  // True as soon as the city layout has actually arrived -- no artificial
+  // minimum wait on top of that. The player can tap "Start Your Journey"
+  // the moment the real data is ready, without being held on the crawl
+  // screen for a fixed amount of time regardless of how fast loading was.
+  const assetsReady = !!layout
 
   // --- Shareable badge queue -----------------------------------------
   // Badges are queued (not shown immediately/simultaneously) so that a
@@ -459,14 +451,14 @@ export default function GamePage() {
   const [unlockPhase, setUnlockPhase] = useState('showing') // 'showing' | 'input'
   const [companionNameInput, setCompanionNameInput] = useState('')
   const [miniGameHubOpen, setMiniGameHubOpen] = useState(false)
-  const narrative = useCompanionNarrative()
+  const narrative = useCompanionNarrative(language)
   // Ambient, non-blocking guidance ("head to Arjun", "follow the arrow",
   // "nice work on that one") — floats above the companion instead of the
   // full-width modal narrative uses, and never needs a tap to dismiss.
   // See useCompanionNudge.js for why these are kept separate from
   // narrative beats that actually need a decision.
-  const companionNudge = useCompanionNudge()
-  const advisoryConversation = useAdvisoryConversation()
+  const companionNudge = useCompanionNudge(language)
+  const advisoryConversation = useAdvisoryConversation(language, t)
   // Stage 2 fires ONCE, on the player's very first quest — an onboarding
   // moment, not something that should repeat on quest #2 through #25.
   const hasShownFirstQuestApproachRef = useRef(false)
@@ -507,8 +499,8 @@ export default function GamePage() {
     [profile?.name]
   )
 
-  const storyNarrator = useStoryNarrator(sanitizedUser)
-  const introTour = useIntroTour(sanitizedUser)
+  const storyNarrator = useStoryNarrator(sanitizedUser, language)
+  const introTour = useIntroTour(sanitizedUser, language)
   const [bondMeter, setBondMeter] = useState(() => getBondMeter(sanitizedUser))
 
   // The intro crawl/joystick-tutorial screen (LoadingScreen) is meant as
@@ -739,7 +731,7 @@ export default function GamePage() {
     const result = syncDailyStreak(sanitizedUser)
     setStreakInfo({ count: result.count, freezers: result.freezers })
     if (result.freezerConsumed) {
-      setSystemNotice('❄️ A Streak Freezer protected your streak!')
+      setSystemNotice(t('game.streakFreezerProtected'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sanitizedUser])
@@ -817,7 +809,8 @@ export default function GamePage() {
     if (id) npcPositionsRef.current.set(id, pos)
   }, [])
 
-  const questState = useQuestState(layout, profile)
+  const questState = useQuestState(layout, profile, language)
+  const levelCapstoneQuests = useMemo(() => getLevelCapstoneQuests(language), [language])
 
   // Maps a new-system task "slot" to the real underlying chain quest id
   // for the CURRENT level, so completing it there silently drives the
@@ -999,8 +992,8 @@ export default function GamePage() {
         setTimeout(() => {
           startMayorHandoff({
             id: `title_level_${currentLevel}`,
-            title: 'Budget Boss',
-            subtitle: 'Always knows where the money goes.',
+            title: t('game.budgetBossTitle'),
+            subtitle: t('game.budgetBossSubtitle'),
             icon: '📊',
             meta: {
               level: completedLevel,
@@ -1036,7 +1029,7 @@ export default function GamePage() {
     // very first render. Reading it inside the callback body (rather than
     // in this array) is safe -- effects only run after the full render
     // (including totalCoins's own declaration) has completed.
-  }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin, startMayorHandoff])
+  }, [questState.levelInfo.level, questState.levelInfo.title, playRewardSound, fireProductFunnelCheckin, startMayorHandoff, t])
 
   useEffect(() => {
     if (!levelUpInfo) return
@@ -1413,13 +1406,17 @@ export default function GamePage() {
   // a story NPC never doubles as the Mayor's look either.
   const FIXED_STORY_NPCS = useMemo(() => {
     const pool = backgroundNpcAvatars.filter((a) => a.id !== 'avatar_6')
+    // Names come from the same translated advisoryScripts.js npcName each
+    // NPC's own advisory conversation uses, rather than a second hardcoded
+    // English copy here, so the display name is never out of sync with
+    // what the conversation itself calls them.
     return [
-      { id: 'arjun', name: 'Arjun', portrait: npcPortrait1, greetingBeat: 'npc_greeting_arjun', bodyUrl: pool[0]?.url, fraction: 0.2 },
-      { id: 'riya', name: 'Riya', portrait: npcPortrait2, greetingBeat: 'npc_greeting_riya', bodyUrl: pool[1]?.url, fraction: 0.5 },
-      { id: 'meera', name: 'Meera', portrait: npcPortrait3, greetingBeat: 'npc_greeting_meera', bodyUrl: pool[2]?.url, fraction: 0.8 },
+      { id: 'arjun', name: getAdvisoryScript('arjun', language)?.npcName || 'Arjun', portrait: npcPortrait1, greetingBeat: 'npc_greeting_arjun', bodyUrl: pool[0]?.url, fraction: 0.2 },
+      { id: 'riya', name: getAdvisoryScript('riya', language)?.npcName || 'Riya', portrait: npcPortrait2, greetingBeat: 'npc_greeting_riya', bodyUrl: pool[1]?.url, fraction: 0.5 },
+      { id: 'meera', name: getAdvisoryScript('meera', language)?.npcName || 'Meera', portrait: npcPortrait3, greetingBeat: 'npc_greeting_meera', bodyUrl: pool[2]?.url, fraction: 0.8 },
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backgroundNpcAvatars])
+  }, [backgroundNpcAvatars, language])
 
   // Minimum distance an NPC's spawn point must keep from any building's
   // center. Bumped up from the first attempt at this fix (7 -> 12) --
@@ -1572,11 +1569,11 @@ export default function GamePage() {
   // the map center near spawn and bundled all 3 games behind one picker
   // menu. Each spot now hosts exactly one specific game directly.
   const MINIGAME_TYPES = useMemo(() => ([
-    { id: 'memory_match', label: 'Memory Match', icon: '\ud83e\udde0', fraction: 0.15 },
-    { id: 'pattern_sequence', label: 'Pattern Sequence', icon: '\ud83c\udfa8', fraction: 0.45 },
-    { id: 'quick_sort', label: 'Quick Sort', icon: '\u26a1', fraction: 0.75 },
-    { id: 'cash_flow_catch', label: 'Cash Flow Catch', icon: '\ud83d\udcb0', fraction: 0.60 },
-  ]), [])
+    { id: 'memory_match', label: t('minigames.memoryMatchLabel'), icon: '\ud83e\udde0', fraction: 0.15 },
+    { id: 'pattern_sequence', label: t('minigames.patternSequenceLabel'), icon: '\ud83c\udfa8', fraction: 0.45 },
+    { id: 'quick_sort', label: t('minigames.quickSortLabel'), icon: '\u26a1', fraction: 0.75 },
+    { id: 'cash_flow_catch', label: t('minigames.cashFlowCatchLabel'), icon: '\ud83d\udcb0', fraction: 0.60 },
+  ]), [t])
 
   const miniGameSpawns = useMemo(() => {
     if (!layout?.roads || layout.roads.length === 0) return {}
@@ -1794,7 +1791,8 @@ export default function GamePage() {
     scenario: profile?.scenario || questState.scenario || 'student',
     state: profile?.state,
     district: profile?.district,
-  }), [profile, questState.scenario])
+    language,
+  }), [profile, questState.scenario, language])
 
   const handleOpenCheckpoint = useCallback(async (questId) => {
     if (questState.isLocked(questId)) {
@@ -1882,10 +1880,10 @@ export default function GamePage() {
       return { ...prev, npcHelpCount: prev.npcHelpCount + 1 }
     })
 
-    setSystemNotice(`🤝 Helped ${npc.name}!`)
+    setSystemNotice(t('game.helpedNpc', { name: npc.name }))
     narrative.play('npc_thanks', { npcName: npc.name, playerName: profile.name })
     setActiveNpcAdvisory(null)
-  }, [addBond, playSuccessSound, currentLevel, getTaskChainId, questState, narrative, profile.name, NPC_HELP_QUOTA])
+  }, [addBond, playSuccessSound, currentLevel, getTaskChainId, questState, narrative, profile.name, NPC_HELP_QUOTA, t])
 
   // Shows the NPC's remaining answer choices as the next conversation
   // turn's option buttons. A wrong pick doesn't lock or fail anything —
@@ -1928,7 +1926,7 @@ export default function GamePage() {
   const handleNpcAdvisory = useCallback(async (npc) => {
     if (activeQuiz || quizLoading || narrative.isActive) return
 
-    const { topic, fallbackQuiz } = pickAdvisoryTopicForLevel(currentLevel)
+    const { topic, fallbackQuiz } = pickAdvisoryTopicForLevel(currentLevel, language)
 
     setActiveQuestId(null)
     setActiveTreasureId(null)
@@ -1963,7 +1961,7 @@ export default function GamePage() {
       {},
       () => presentAdvisoryOptions(npc, finalQuiz, finalQuiz.options.map((_, i) => i))
     )
-  }, [activeQuiz, quizLoading, buildUserProfileForAgent, normalizeQuizPayload, questState.levelInfo, currentLevel, narrative, presentAdvisoryOptions])
+  }, [activeQuiz, quizLoading, buildUserProfileForAgent, normalizeQuizPayload, questState.levelInfo, currentLevel, language, narrative, presentAdvisoryOptions])
 
   // The capstone — reuses this level's LAST chain building as its
   // physical location (no new 3D assets needed), but poses the bigger,
@@ -1989,7 +1987,7 @@ export default function GamePage() {
       })
       return
     }
-    const capstone = LEVEL_CAPSTONE_QUESTS[currentLevel]
+    const capstone = levelCapstoneQuests[currentLevel]
     if (!capstone) return
 
     setActiveQuestId(null)
@@ -2007,7 +2005,7 @@ export default function GamePage() {
     const normalized = normalizeQuizPayload(agentResponse, capstone.reward)
     setActiveQuiz(normalized || { ...capstone.fallbackQuiz, reward: capstone.reward, isFallback: true })
     setQuizLoading(false)
-  }, [activeQuiz, quizLoading, buildUserProfileForAgent, normalizeQuizPayload, questState.levelInfo, currentLevel, level1NextRequiredStep, LEVEL_1_SEQUENCE_LABELS, narrative])
+  }, [activeQuiz, quizLoading, buildUserProfileForAgent, normalizeQuizPayload, questState.levelInfo, currentLevel, levelCapstoneQuests, level1NextRequiredStep, LEVEL_1_SEQUENCE_LABELS, narrative])
 
   const handleNpcInteract = useCallback(() => {
     if (!nearbyNpc || narrative.isActive || activeQuiz || quizLoading) return
@@ -2513,12 +2511,19 @@ export default function GamePage() {
   // "Pin on map" button until that's done -- same honest-limitation
   // pattern as before, just now covering 2 cards instead of 0.
   const npcCharacters = [
-    { id: 'arjun', name: 'Arjun', image: npcPortrait1, flow: "Salary just came in. First month I've actually got enough to think past just getting by. My friend's group trip booking closes today -- need to decide fast.", hand: 'nb-hand-1' },
-    { id: 'riya', name: 'Riya', image: npcPortrait2, flow: "Just got ₹2,000 as a surprise gift. The sneakers I've been stalking for months just went on a 3-hour flash sale...", hand: 'nb-hand-2' },
-    { id: 'meera', name: 'Meera', image: npcPortrait3, flow: "This month's actually been great, way more orders than usual. A supplier's offering bulk materials at a discount -- only today.", hand: 'nb-hand-3' },
-    { id: 'vikram', name: 'Vikram', image: npcPortrait4, flow: "Got a bonus of ₹10,000, but my credit card bill is due, my gym membership auto-renewed, and my friends are planning a lavish weekend getaway.", hand: 'nb-hand-4' },
-    { id: 'aahan', name: 'Aahan', image: npcPortrait5, flow: "Big crossroads. I've saved up ₹1.5 Lakhs. Do I dump it into a high-risk crypto trend, split it with an index fund, or park it safely in a liquid debt fund?", hand: 'nb-hand-5' },
-  ]
+    { id: 'arjun', image: npcPortrait1, hand: 'nb-hand-1' },
+    { id: 'riya', image: npcPortrait2, hand: 'nb-hand-2' },
+    { id: 'meera', image: npcPortrait3, hand: 'nb-hand-3' },
+    { id: 'vikram', image: npcPortrait4, hand: 'nb-hand-4' },
+    { id: 'aahan', image: npcPortrait5, hand: 'nb-hand-5' },
+  ].map((c) => {
+    // Reuses the SAME translated dilemmaLine/npcName the advisory
+    // conversation itself opens with (see advisoryScripts.js), instead of
+    // hand-duplicating this text a second time -- so the notice board's
+    // preview can never drift out of sync with what actually gets said.
+    const script = getAdvisoryScript(c.id, language)
+    return { ...c, name: script?.npcName || c.id, flow: script?.dilemmaLine || '' }
+  })
   // Shows ALL characters as available options, not just however many the
   // quota strictly requires — "here's who you could help," matching the
   // no-strict-task-list direction. The actual coin/level completion
@@ -2557,8 +2562,8 @@ export default function GamePage() {
     noticeBoardItems.push({
       id: 'recognition',
       icon: '👋',
-      title: "Earn the City's Recognition",
-      flow: 'Keep helping people — eventually, someone will recognize you.',
+      title: t('game.recognitionTitle'),
+      flow: t('game.recognitionFlow'),
       done: levelTaskProgress.recognitionDone,
       // Bonus flavor only in Level 1's fixed sequence -- doesn't count
       // toward the required 100% (see LEVEL_1_WEIGHTS above).
@@ -2575,8 +2580,8 @@ export default function GamePage() {
     noticeBoardItems.push({
       id: 'minigame-memory-match',
       icon: '🎮',
-      title: 'Memory Match',
-      flow: 'Clear the Memory Match mini-game spot in the city.',
+      title: t('game.memoryMatchTitle'),
+      flow: t('game.memoryMatchFlow'),
       done: (levelTaskProgress.completedMinigameIds || []).includes('memory_match'),
       weight: LEVEL_1_WEIGHTS.memory_match,
       pinPosition: memoryMatchSpawn ? { x: memoryMatchSpawn[0], z: memoryMatchSpawn[2] } : null,
@@ -2584,8 +2589,8 @@ export default function GamePage() {
     noticeBoardItems.push({
       id: 'minigame-cash-flow-catch',
       icon: '🎮',
-      title: 'Cash Flow Catch',
-      flow: 'Clear the Cash Flow Catch mini-game spot in the city.',
+      title: t('game.cashFlowCatchTitle'),
+      flow: t('game.cashFlowCatchFlow'),
       done: (levelTaskProgress.completedMinigameIds || []).includes('cash_flow_catch'),
       weight: LEVEL_1_WEIGHTS.cash_flow_catch,
       pinPosition: cashFlowCatchSpawn ? { x: cashFlowCatchSpawn[0], z: cashFlowCatchSpawn[2] } : null,
@@ -2594,8 +2599,8 @@ export default function GamePage() {
     noticeBoardItems.push({
       id: 'minigame',
       icon: '🎮',
-      title: 'Clear a Mini-Game',
-      flow: 'Any of the 3 mini-game spots around the city -- beat one challenge.',
+      title: t('game.clearMinigameTitle'),
+      flow: t('game.clearMinigameFlow'),
       done: levelTaskProgress.minigameDone,
       weight: TASK_WEIGHTS.minigame,
       // Points at the first of the 3 spread-out spots as a reasonable
@@ -2611,8 +2616,8 @@ export default function GamePage() {
   noticeBoardItems.push({
     id: 'capstone',
     icon: '🏆',
-    title: LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || 'Capstone Mission',
-    flow: "The city's biggest ask this level — save it for when you're ready.",
+    title: levelCapstoneQuests[currentLevel]?.label || t('game.capstoneMission'),
+    flow: t('game.capstoneFlow'),
     done: levelTaskProgress.capstoneDone,
     // Bonus content in Level 1 -- doesn't count toward the required 100%
     // (see LEVEL_1_WEIGHTS above); unchanged for every other level.
@@ -2977,16 +2982,16 @@ export default function GamePage() {
 
       <div className="rotate-overlay">
         <div className="rotate-overlay-icon">📱</div>
-        <p>For the full game experience, rotate your device to landscape.</p>
-        <button onClick={handleEnterFullscreen}>Enter Fullscreen</button>
+        <p>{t('game.rotateText')}</p>
+        <button onClick={handleEnterFullscreen}>{t('game.enterFullscreen')}</button>
       </div>
 
       {companionPhase === 'repairing' && (
         <div className="companion-repair-card">
           <p className="companion-repair-card__label">
             {unlockPhase === 'showing'
-              ? '🔧 Powering up the companion...'
-              : '👆 Tap the glowing panel to wake it up'}
+              ? t('game.companionPoweringUp')
+              : t('game.companionTapToWake')}
           </p>
           <div className="companion-unlock-tiles">
             {['#ef4444', '#22d3ee', '#fbbf24', '#8b5cf6'].map((color, i) => (
@@ -3011,14 +3016,14 @@ export default function GamePage() {
       {companionPhase === 'repaired' && (
         <div className="companion-name-card">
           <p className="companion-name-card__line">
-            "...oh. Okay. Hang on — I don't think I've been awake in a while. Did you just unlock me?"
+            {t('game.companionWakeLine1')}
           </p>
           <p className="companion-name-card__line">
-            "Huh. Cool. Okay, well — I don't actually have a name yet. What do I call myself?"
+            {t('game.companionWakeLine2')}
           </p>
           <input
             type="text"
-            placeholder="Name your companion"
+            placeholder={t('game.namePlaceholder')}
             value={companionNameInput}
             onChange={(e) => setCompanionNameInput(e.target.value)}
             maxLength={20}
@@ -3028,7 +3033,7 @@ export default function GamePage() {
             disabled={!companionNameInput.trim()}
             onClick={handleConfirmCompanionName}
           >
-            Confirm
+            {t('game.confirm')}
           </button>
         </div>
       )}
@@ -3059,33 +3064,33 @@ export default function GamePage() {
           {funnelPrompt === 'asking' && (
             <>
               <p className="funnel-panel-text">
-                Real talk — ever thought about actually opening a savings account, instead of just holding onto cash?
+                {t('game.funnelAsking')}
               </p>
               <div className="funnel-panel-actions">
                 <button className="funnel-panel-btn funnel-panel-btn--primary" onClick={handleFunnelYes}>
-                  🏦 Yeah, tell me more
+                  {t('game.funnelYes')}
                 </button>
                 <button className="funnel-panel-btn funnel-panel-btn--secondary" onClick={handleFunnelDecline}>
-                  Not now
+                  {t('game.funnelNotNow')}
                 </button>
               </div>
             </>
           )}
           {funnelPrompt === 'yes' && (
             <>
-              <p className="funnel-panel-text">Good call — takes two minutes. Let's get you set up.</p>
+              <p className="funnel-panel-text">{t('game.funnelYesText')}</p>
               <div className="funnel-panel-actions">
                 <button className="funnel-panel-btn funnel-panel-btn--primary" onClick={handleOnboardClick}>
-                  Continue to Onboarding →
+                  {t('game.funnelContinue')}
                 </button>
                 <button className="funnel-panel-btn funnel-panel-btn--secondary" onClick={() => setFunnelPrompt(null)}>
-                  Not now
+                  {t('game.funnelNotNow')}
                 </button>
               </div>
             </>
           )}
           {funnelPrompt === 'declined' && (
-            <p className="funnel-panel-text">Totally fine. I'll drop it — for now.</p>
+            <p className="funnel-panel-text">{t('game.funnelDeclined')}</p>
           )}
         </div>
       )}
@@ -3094,8 +3099,8 @@ export default function GamePage() {
 
       {activeEffect && (
         <div className="checkpoint-banner">
-          <h2>🎉 CHECKPOINT PASSED!</h2>
-          <p>{activeEffect.label} Completed</p>
+          <h2>{t('game.checkpointPassed')}</h2>
+          <p>{activeEffect.note || `${activeEffect.label} ${t('game.completed')}`}</p>
         </div>
       )}
 
@@ -3104,8 +3109,8 @@ export default function GamePage() {
           <div className="level-up-burst" />
           <div className="level-up-content">
             <div className="level-up-star">⭐</div>
-            <div className="level-up-label">LEVEL UP</div>
-            <div className="level-up-number">Level {levelUpInfo.level}</div>
+            <div className="level-up-label">{t('game.levelUp')}</div>
+            <div className="level-up-number">{t('game.levelLabel', { n: levelUpInfo.level })}</div>
             <div className="level-up-title">{levelUpInfo.title}</div>
           </div>
         </div>
@@ -3205,7 +3210,7 @@ export default function GamePage() {
                     position={[iconCenterX, 2.5, iconCenterZ]}
                     playerPosition={playerPos}
                     onTriggerInteract={handleCapstoneInteract}
-                    label={LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || questState.questLabels[questId] || questId.toUpperCase()}
+                    label={levelCapstoneQuests[currentLevel]?.label || questState.questLabels[questId] || questId.toUpperCase()}
                     icon="🏆"
                     activeColor="#f59e0b"
                     activeGlow="#fbbf24"
@@ -3216,14 +3221,14 @@ export default function GamePage() {
 
           {playerPos &&
             treasureSpots
-              .filter((t) => !collectedTreasureIds.has(t.id))
-              .map((t) => (
+              .filter((treasure) => !collectedTreasureIds.has(treasure.id))
+              .map((treasure) => (
                 <FloatingGenieIcon
-                  key={t.id}
-                  position={[t.position[0], 1.6, t.position[2]]}
+                  key={treasure.id}
+                  position={[treasure.position[0], 1.6, treasure.position[2]]}
                   playerPosition={playerPos}
-                  onTriggerInteract={() => handleOpenTreasure(t)}
-                  label="Open Treasure Chest"
+                  onTriggerInteract={() => handleOpenTreasure(treasure)}
+                  label={t('game.openTreasureChest')}
                   icon="🎁"
                   activeColor="#d97706"
                   activeGlow="#fbbf24"
@@ -3316,7 +3321,7 @@ export default function GamePage() {
                     position={[pos[0], 2, pos[2]]}
                     playerPosition={playerPos}
                     onTriggerInteract={handleFixedNpcInteract}
-                    label={`Talk to ${npc.name}`}
+                    label={t('game.talkTo', { name: npc.name })}
                     icon="💬"
                     activeColor="#f472b6"
                     activeGlow="#f9a8d4"
@@ -3336,7 +3341,7 @@ export default function GamePage() {
                 position={[pos[0], 2, pos[2]]}
                 playerPosition={playerPos}
                 onTriggerInteract={handleMiniGameSpotInteract}
-                label={`Play ${game.label}`}
+                label={t('game.playGame', { name: game.label })}
                 icon={game.icon}
                 activeColor="#22d3ee"
                 activeGlow="#67e8f9"
@@ -3368,7 +3373,7 @@ export default function GamePage() {
               <button
                 className="audio-toggle-btn"
                 onClick={() => setGuidePanelOpen((v) => !v)}
-                title="Open guide"
+                title={t('hud.openGuide')}
                 id="guide-anchor-btn"
               >
                 ❓
@@ -3377,15 +3382,15 @@ export default function GamePage() {
               <div className="stat-pill">
                 <span>🎓</span>
             <div>
-              <p>Scenario</p>
-              <strong>{currentScenario === 'employee' ? 'Employee' : 'Student'}</strong>
+              <p>{t('hud.scenario')}</p>
+              <strong>{currentScenario === 'employee' ? t('hud.employee') : t('hud.student')}</strong>
             </div>
           </div>
 
           <div className="stat-pill">
             <span>⭐</span>
             <div>
-              <p>Level {questState.levelInfo.level}</p>
+              <p>{t('hud.level', { n: questState.levelInfo.level })}</p>
               <strong>{questState.levelInfo.title}</strong>
             </div>
           </div>
@@ -3393,7 +3398,7 @@ export default function GamePage() {
           <div className={`stat-pill${coinPop ? ' stat-pill--coin-pop' : ''}`}>
             <span>🪙</span>
             <div>
-              <p>Coins</p>
+              <p>{t('hud.coins')}</p>
               <strong>{totalCoins}</strong>
             </div>
           </div>
@@ -3401,7 +3406,7 @@ export default function GamePage() {
           <div className="stat-pill">
             <span>📋</span>
             <div>
-              <p>Tasks</p>
+              <p>{t('hud.tasks')}</p>
               <strong>{currentLevelCompletedCount}/{currentLevelQuestIds.length}</strong>
             </div>
           </div>
@@ -3409,15 +3414,15 @@ export default function GamePage() {
           <div className="stat-pill">
             <span>🔥</span>
             <div>
-              <p>Streak</p>
-              <strong>{streakInfo.count} day{streakInfo.count === 1 ? '' : 's'}</strong>
+              <p>{t('hud.streak')}</p>
+              <strong>{t(streakInfo.count === 1 ? 'hud.streakDay' : 'hud.streakDays', { n: streakInfo.count })}</strong>
             </div>
           </div>
 
           <div className="stat-pill">
             <span>❄️</span>
             <div>
-              <p>Freezers</p>
+              <p>{t('hud.freezers')}</p>
               <strong>{streakInfo.freezers}</strong>
             </div>
           </div>
@@ -3425,7 +3430,7 @@ export default function GamePage() {
           <div className="stat-pill">
             <span>📜</span>
             <div>
-              <p>Hint Scrolls</p>
+              <p>{t('hud.hintScrolls')}</p>
               <strong>{hintScrolls}</strong>
             </div>
           </div>
@@ -3433,7 +3438,7 @@ export default function GamePage() {
           <div className="stat-pill">
             <span>🤝</span>
             <div>
-              <p>Trust</p>
+              <p>{t('hud.trust')}</p>
               <strong>{bondMeter}</strong>
             </div>
           </div>
@@ -3441,8 +3446,8 @@ export default function GamePage() {
           <button className="stat-pill stat-pill--clickable" onClick={() => setLeaderboardOpen((v) => !v)}>
             <span>🏆</span>
             <div>
-              <p>Rankings</p>
-              <strong>Leaderboard</strong>
+              <p>{t('hud.rankings')}</p>
+              <strong>{t('hud.leaderboard')}</strong>
             </div>
           </button>
             </>
@@ -3451,7 +3456,7 @@ export default function GamePage() {
           <button
             className="top-bar-collapse-btn"
             onClick={() => setTopBarCollapsed((v) => !v)}
-            title={topBarCollapsed ? 'Show top bar' : 'Collapse top bar'}
+            title={topBarCollapsed ? t('hud.showTopBar') : t('hud.collapseTopBar')}
           >
             {topBarCollapsed ? '▶' : '◀'}
           </button>
@@ -3546,36 +3551,36 @@ export default function GamePage() {
 
         {!anyPanelOpen && effectiveNearbyQuest && (
           <div className="interaction-toast interaction-toast--keyhint">
-            Press <b>E</b> — Enter {LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || effectiveNearbyQuest.label}
+            Press <b>E</b> — {t('game.enterQuest', { label: levelCapstoneQuests[currentLevel]?.label || effectiveNearbyQuest.label })}
           </div>
         )}
 
         {!anyPanelOpen && !effectiveNearbyQuest && nearbyCompanionToRepair && (
           <div className="interaction-toast interaction-toast--keyhint">
-            Press <b>E</b> — Unlock Companion
+            Press <b>E</b> — {t('game.unlockCompanion')}
           </div>
         )}
 
         {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && nearbyMiniGameSpot && !miniGameHubOpen && (
           <div className="interaction-toast interaction-toast--keyhint">
-            Press <b>E</b> — Play {MINIGAME_TYPES.find((g) => g.id === nearbyMiniGameSpot)?.label || 'Mini-Game'}
+            Press <b>E</b> — {t('game.playGame', { name: MINIGAME_TYPES.find((g) => g.id === nearbyMiniGameSpot)?.label || t('game.miniGameFallback') })}
           </div>
         )}
 
         {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && !nearbyMiniGameSpot && nearbyFixedNpc && !narrative.isActive && (
           <div className="interaction-toast interaction-toast--keyhint">
-            Press <b>E</b> — Talk to {nearbyFixedNpc.name}
+            Press <b>E</b> — {t('game.talkTo', { name: nearbyFixedNpc.name })}
           </div>
         )}
 
         {!anyPanelOpen && !effectiveNearbyQuest && !nearbyCompanionToRepair && !nearbyMiniGameSpot && !nearbyFixedNpc && nearbyNpc && !narrative.isActive && (
           <div className="interaction-toast interaction-toast--keyhint">
-            Press <b>E</b> — Help {nearbyNpc.name}
+            Press <b>E</b> — {t('game.helpNpc', { name: nearbyNpc.name })}
           </div>
         )}
 
         {quizLoading && !activeQuiz && (
-          <div className="interaction-toast">⏳ Generating your question...</div>
+          <div className="interaction-toast">{t('game.generatingQuestion')}</div>
         )}
 
         {activeQuiz && (
@@ -3596,10 +3601,10 @@ export default function GamePage() {
                 if (rewardType === 'streak_freezer') {
                   const newFreezerCount = addStreakFreezer(sanitizedUser, 1)
                   setStreakInfo((prev) => ({ ...prev, freezers: newFreezerCount }))
-                  setSystemNotice('❄️ Treasure reward: +1 Streak Freezer!')
+                  setSystemNotice(t('game.treasureStreakFreezer'))
                 } else {
                   setHintScrolls((prev) => prev + 1)
-                  setSystemNotice('📜 Treasure reward: +1 Hint Scroll!')
+                  setSystemNotice(t('game.treasureHintScroll'))
                 }
                 collectTreasureOnServer(profile.email, activeTreasureId, rewardType, rewardAmount || 5)
                 addBond(BOND_REWARDS.treasure)
@@ -3662,7 +3667,7 @@ export default function GamePage() {
                 // instead of a building — this used to be plain text only.
                 setActiveEffect({
                   position: playerPos ? [playerPos.x, 0, playerPos.z] : [0, 0, 0],
-                  label: LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || 'Capstone',
+                  label: levelCapstoneQuests[currentLevel]?.label || t('game.capstoneMission'),
                 })
               }
               setActiveQuiz(null)
@@ -3708,20 +3713,39 @@ export default function GamePage() {
               )}
               <p>
                 {currentScenario === 'employee'
-                  ? 'New Employee'
-                  : 'College Student'}
+                  ? t('onboarding.scenarioEmployee')
+                  : t('onboarding.scenarioStudent')}
               </p>
-              <p>Coins: {totalCoins}</p>
+              <p>{t('drawer.coinsLabel')}: {totalCoins}</p>
               <p>
-                Tasks: {completedCount} / {questState.chain.length}
+                {t('drawer.tasksLabel')}: {completedCount} / {questState.chain.length}
               </p>
-              <button 
-                onClick={handleLogout} 
+
+              <p className="profile-drawer__language-label">{t('drawer.languageLabel')}</p>
+              <div className="profile-drawer__language-picker" role="group" aria-label={t('drawer.languageLabel')}>
+                {[
+                  { code: 'en', label: 'English' },
+                  { code: 'hi', label: 'हिंदी' },
+                  { code: 'ta', label: 'தமிழ்' },
+                ].map((opt) => (
+                  <button
+                    key={opt.code}
+                    type="button"
+                    className={`profile-drawer__language-btn${language === opt.code ? ' profile-drawer__language-btn--active' : ''}`}
+                    onClick={() => setLanguage(opt.code)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={handleLogout}
                 style={{ backgroundColor: '#ef4444', color: 'white', marginTop: '10px', marginBottom: '5px' }}
               >
-                Logout & Switch User
+                {t('drawer.logout')}
               </button>
-              <button onClick={() => setDrawerOpen(false)}>Close</button>
+              <button onClick={() => setDrawerOpen(false)}>{t('drawer.close')}</button>
             </aside>
           </>
         )}
@@ -3729,12 +3753,12 @@ export default function GamePage() {
         <MobileControls
           showInteract={(!!effectiveNearbyQuest || !!nearbyTreasure || nearbyCompanionToRepair || (!!nearbyMiniGameSpot && !miniGameHubOpen) || (!!nearbyFixedNpc && !narrative.isActive) || (!!nearbyNpc && !narrative.isActive)) && !activeQuiz && !anyPanelOpen}
           interactLabel={
-            (effectiveNearbyQuest ? (LEVEL_CAPSTONE_QUESTS[currentLevel]?.label || effectiveNearbyQuest.label) : '') ||
-            (nearbyTreasure ? 'Open Treasure Chest' : '') ||
-            (nearbyCompanionToRepair ? 'Unlock Companion' : '') ||
-            (nearbyMiniGameSpot ? `Play ${MINIGAME_TYPES.find((g) => g.id === nearbyMiniGameSpot)?.label || 'Mini-Game'}` : '') ||
-            (nearbyFixedNpc ? `Talk to ${nearbyFixedNpc.name}` : '') ||
-            (nearbyNpc ? `Help ${nearbyNpc.name}` : '')
+            (effectiveNearbyQuest ? (levelCapstoneQuests[currentLevel]?.label || effectiveNearbyQuest.label) : '') ||
+            (nearbyTreasure ? t('game.openTreasureChest') : '') ||
+            (nearbyCompanionToRepair ? t('game.unlockCompanion') : '') ||
+            (nearbyMiniGameSpot ? t('game.playGame', { name: MINIGAME_TYPES.find((g) => g.id === nearbyMiniGameSpot)?.label || t('game.miniGameFallback') }) : '') ||
+            (nearbyFixedNpc ? t('game.talkTo', { name: nearbyFixedNpc.name }) : '') ||
+            (nearbyNpc ? t('game.helpNpc', { name: nearbyNpc.name }) : '')
           }
           onInteract={() => {
             if (activeQuiz) return
@@ -3760,15 +3784,24 @@ export default function GamePage() {
             forcedGameId={nearbyMiniGameSpot}
             onExit={() => setMiniGameHubOpen(false)}
             onReward={(gameId, result) => {
-              setBonusCoins((prev) => prev + 10)
+              // A "Finish" tap mid-game (see MiniGameShell's onFinish)
+              // still completes the task and unlocks whatever it gates,
+              // but at half the coins of an actual win — banking partial
+              // progress is a real shortcut, not a free ride.
+              const rewardMultiplier = result?.skipped ? 0.5 : 1
+              setBonusCoins((prev) => prev + Math.round(10 * rewardMultiplier))
               playRewardSound('minigame')
               // Same checkpoint banner + 3D particle burst a quest completion
               // gets, anchored on the player — this used to be silent text only.
               setActiveEffect({
                 position: playerPos ? [playerPos.x, 0, playerPos.z] : [0, 0, 0],
-                label: 'Mini-Game',
+                label: t('game.miniGameFallback'),
+                // Overrides the default "{label} Completed" line below with
+                // an explicit reduced-reward note, instead of stacking a
+                // second overlapping banner on top of this one.
+                note: result?.skipped ? t('minigames.partialReward') : null,
               })
-              addBond(BOND_REWARDS.minigame)
+              addBond(result?.skipped ? Math.round(BOND_REWARDS.minigame * rewardMultiplier) : BOND_REWARDS.minigame)
 
               // The standalone +10 above is the mini-game hub's own
               // per-win reward (unchanged) — this additionally fulfills
@@ -3794,7 +3827,7 @@ export default function GamePage() {
                   const slotIndex = LEVEL_1_MINIGAME_SLOTS[gameId]
                   if (!alreadyCounted && slotIndex !== undefined) {
                     const chainId = getTaskChainId(slotIndex)
-                    if (chainId) questState.completeQuest(chainId)
+                    if (chainId) questState.completeQuest(chainId, rewardMultiplier)
                   }
                   const bothDone = nextCompletedMinigameIds.includes('memory_match')
                     && nextCompletedMinigameIds.includes('cash_flow_catch')
@@ -3803,7 +3836,7 @@ export default function GamePage() {
 
                 if (prev.minigameDone) return { ...prev, completedMinigameIds: nextCompletedMinigameIds }
                 const chainId = getTaskChainId(3)
-                if (chainId) questState.completeQuest(chainId)
+                if (chainId) questState.completeQuest(chainId, rewardMultiplier)
                 return { ...prev, minigameDone: true, completedMinigameIds: nextCompletedMinigameIds }
               })
               // Completed effect only (checkpoint banner above) -- no

@@ -2,6 +2,10 @@
 .env
 *.env
 !.env.example
+!.env.production.example
+
+# --- Player data exports (real profile/behavioral data, not source) ---
+admin_dashboard/all_profiles.json
 
 # --- Python backend ---
 __pycache__/

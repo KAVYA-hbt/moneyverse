@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { emitTelemetry } from '../../telemetry/telemetryBus.js'
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 
 // Below this decision latency, an answer is flagged (not blocked) as
 // implausibly fast for genuine reading + reasoning — well under median
@@ -19,9 +20,12 @@ export function QuestQuizModal({
   onRetryEasy, // Call this when 3 attempts fail to fetch an easier, different question
   onFail,
   onClose,
-  title = 'QUEST CHECKPOINT', // e.g. "Give Arjun your advice" for NPC advisory encounters
-  successText = '🎉 Correct! Quest Completed!',
+  title, // e.g. "Give Arjun your advice" for NPC advisory encounters
+  successText,
 }) {
+  const { t } = useLanguage()
+  const resolvedTitle = title ?? t('quiz.defaultTitle')
+  const resolvedSuccessText = successText ?? t('quiz.defaultSuccessText')
   const [attempts, setAttempts] = useState(3)
   const [disabledOptions, setDisabledOptions] = useState([])
   const [feedback, setFeedback] = useState(null)
@@ -70,7 +74,7 @@ export function QuestQuizModal({
 
     if (index === quiz.correctIndex) {
       logAttempt(index, true)
-      setFeedback({ type: 'success', text: successText })
+      setFeedback({ type: 'success', text: resolvedSuccessText })
       setTimeout(() => {
         onSuccess(quiz.reward || 25)
       }, 1200)
@@ -81,15 +85,15 @@ export function QuestQuizModal({
       setDisabledOptions((prev) => [...prev, index])
 
       if (remainingAttempts > 0) {
-        setFeedback({ 
-          type: 'error', 
-          text: `❌ Incorrect option locked! (${remainingAttempts} try left)` 
+        setFeedback({
+          type: 'error',
+          text: t('quiz.incorrectLocked', { remaining: remainingAttempts }),
         })
       } else {
         // 🚨 OUT OF TRIES: Trigger retry with a completely new easy question
-        setFeedback({ 
-          type: 'error', 
-          text: '🔄 Out of tries! Fetching a new question...' 
+        setFeedback({
+          type: 'error',
+          text: t('quiz.outOfTries'),
         })
         
         setTimeout(async () => {
@@ -126,7 +130,7 @@ export function QuestQuizModal({
       } else if (quiz.hint) {
         setShownHint(quiz.hint)
       } else {
-        setShownHint("Focus on standard SBI banking verification rules!")
+        setShownHint(t('quiz.defaultHint'))
       }
     } else if (quiz.hint) {
       setShownHint(quiz.hint)
@@ -160,35 +164,35 @@ export function QuestQuizModal({
         {/* HEADER & BADGES */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: 'bold', letterSpacing: '0.5px' }}>
-            {title} {quiz.concept_tag && `• ${quiz.concept_tag}`}
+            {resolvedTitle} {quiz.concept_tag && `• ${quiz.concept_tag}`}
           </span>
-          
+
           <div style={{ display: 'flex', gap: '8px' }}>
-            <span style={{ 
-              background: '#0284c7', 
-              padding: '3px 10px', 
-              borderRadius: '12px', 
+            <span style={{
+              background: '#0284c7',
+              padding: '3px 10px',
+              borderRadius: '12px',
               fontSize: '11px',
-              fontWeight: 'bold' 
+              fontWeight: 'bold'
             }}>
-              📜 Hints: {availableHints}
+              📜 {t('quiz.hintsLabel')}: {availableHints}
             </span>
 
-            <span style={{ 
-              background: attempts === 1 ? '#ef4444' : '#3b82f6', 
-              padding: '3px 10px', 
-              borderRadius: '12px', 
+            <span style={{
+              background: attempts === 1 ? '#ef4444' : '#3b82f6',
+              padding: '3px 10px',
+              borderRadius: '12px',
               fontSize: '11px',
-              fontWeight: 'bold' 
+              fontWeight: 'bold'
             }}>
-              Tries: {attempts}/3
+              {t('quiz.triesLabel')}: {attempts}/3
             </span>
           </div>
         </div>
 
         {/* QUESTION TEXT */}
         <h3 style={{ fontSize: '17px', marginBottom: '16px', lineHeight: '1.4', fontWeight: '600' }}>
-          {loading ? "⏳ Fetching a new question..." : quiz.question}
+          {loading ? t('quiz.fetchingNewQuestion') : quiz.question}
         </h3>
 
         {/* HINT SCROLL BUTTON / DISPLAY */}
@@ -213,7 +217,7 @@ export function QuestQuizModal({
               gap: '6px'
             }}
           >
-            {loading ? '⏳ Unrolling Scroll...' : `💡 Use Hint Scroll (${availableHints} remaining)`}
+            {loading ? t('quiz.unrollingScroll') : t('quiz.useHintScroll', { count: availableHints })}
           </button>
         ) : (
           <div style={{
@@ -226,7 +230,7 @@ export function QuestQuizModal({
             fontSize: '13px',
             lineHeight: '1.4'
           }}>
-            📜 <b>Scroll of Wisdom:</b> {shownHint}
+            📜 <b>{t('quiz.scrollOfWisdom')}</b> {shownHint}
           </div>
         )}
 
@@ -256,7 +260,7 @@ export function QuestQuizModal({
                 }}
               >
                 <span>{optionText}</span>
-                {isLocked && <span style={{ fontSize: '12px' }}>🔒 Locked</span>}
+                {isLocked && <span style={{ fontSize: '12px' }}>{t('quiz.locked')}</span>}
               </button>
             )
           })}
@@ -292,7 +296,7 @@ export function QuestQuizModal({
             cursor: 'pointer'
           }}
         >
-          Cancel
+          {t('quiz.cancel')}
         </button>
       </div>
     </div>

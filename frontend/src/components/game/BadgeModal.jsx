@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './BadgeModal.css'
 
 // Canvas is drawn at 2x for crisp export/share images, then scaled down
@@ -59,7 +60,7 @@ function drawEmblem(ctx, cx, cy, r) {
   ctx.restore()
 }
 
-function drawBadge(canvas, { title, subtitle, icon, name, dateLabel, level, levelTitle, trustPercent, coins }) {
+function drawBadge(canvas, { title, subtitle, icon, name, dateLabel, level, levelTitle, trustPercent, coins, labels, certifiedText }) {
   const ctx = canvas.getContext('2d')
   const w = CANVAS_W
   const h = CANVAS_H
@@ -154,7 +155,7 @@ function drawBadge(canvas, { title, subtitle, icon, name, dateLabel, level, leve
   ctx.textBaseline = 'middle'
   ctx.fillText(icon || '📊', 0, -4)
   ctx.font = '700 8px Arial'
-  ctx.fillText('CERTIFIED', 0, 22)
+  ctx.fillText(certifiedText, 0, 22)
   ctx.restore()
   ctx.save()
   ctx.translate(stampCx, stampCy)
@@ -195,12 +196,12 @@ function drawBadge(canvas, { title, subtitle, icon, name, dateLabel, level, leve
   // Ledger rows -- built from real session data where available, so this
   // isn't decorative filler.
   const rows = [
-    ['Title earned', title],
-    level ? ['Level completed', levelTitle ? `${level} — ${levelTitle}` : String(level)] : null,
-    typeof trustPercent === 'number' ? ['Trust score', `${trustPercent}%`] : null,
-    typeof coins === 'number' ? ['Coins on record', String(coins)] : null,
-    ['Date issued', dateLabel],
-    ['Account holder', name || 'Player'],
+    [labels.titleEarned, title],
+    level ? [labels.levelCompleted, levelTitle ? `${level} — ${levelTitle}` : String(level)] : null,
+    typeof trustPercent === 'number' ? [labels.trustScore, `${trustPercent}%`] : null,
+    typeof coins === 'number' ? [labels.coinsOnRecord, String(coins)] : null,
+    [labels.dateIssued, dateLabel],
+    [labels.accountHolder, name || labels.player],
   ].filter(Boolean)
 
   ctx.font = '400 13px "Courier New", monospace'
@@ -231,7 +232,7 @@ function drawBadge(canvas, { title, subtitle, icon, name, dateLabel, level, leve
   ctx.font = '400 11px Arial'
   ctx.fillStyle = '#5b6b80'
   ctx.textAlign = 'left'
-  ctx.fillText('Authorised signatory', 60, sigY + 16)
+  ctx.fillText(labels.authorisedSignatory, 60, sigY + 16)
   drawEmblem(ctx, 240, sigY - 6, 16)
 
   // Barcode-style unique record id, bottom-right
@@ -290,8 +291,9 @@ const SPARKLE_POSITIONS = [
  *          telemetry without this component knowing about that system.
  */
 export default function BadgeModal({ badge, defaultName, onClose, onPublished }) {
+  const { t } = useLanguage()
   const canvasRef = useRef(null)
-  const [name, setName] = useState(defaultName || 'Player')
+  const [name, setName] = useState(defaultName || t('common.player'))
   const [status, setStatus] = useState('idle') // 'idle' | 'publishing' | 'published' | 'error'
   // For choice badges: which option the player picked, or null while
   // they're still looking at the selection grid.
@@ -313,14 +315,25 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
       title: resolvedBadge.title,
       subtitle: resolvedBadge.subtitle,
       icon: resolvedBadge.icon,
-      name: name.trim() || 'Player',
+      name: name.trim() || t('common.player'),
       dateLabel,
       level: meta.level,
       levelTitle: meta.levelTitle,
       trustPercent: meta.trustPercent,
       coins: meta.coins,
+      certifiedText: t('badge.certified'),
+      labels: {
+        titleEarned: t('badge.titleEarned'),
+        levelCompleted: t('badge.levelCompleted'),
+        trustScore: t('badge.trustScore'),
+        coinsOnRecord: t('badge.coinsOnRecord'),
+        dateIssued: t('badge.dateIssued'),
+        accountHolder: t('badge.accountHolder'),
+        authorisedSignatory: t('badge.authorisedSignatory'),
+        player: t('common.player'),
+      },
     })
-  }, [resolvedBadge, name, dateLabel])
+  }, [resolvedBadge, name, dateLabel, t])
 
   // A fresh choice badge arriving (badge.id changed) should always start
   // back on the selection grid, not carry over a previous pick.
@@ -347,10 +360,10 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
         await navigator.share({
           files: [file],
           title: resolvedBadge.title,
-          text: `${name.trim() || 'I'} just earned "${resolvedBadge.title}" in MoneyVerse! 🏅`,
+          text: t('badge.shareText', { name: name.trim() || t('common.player'), title: resolvedBadge.title }),
         })
         setStatus('published')
-        onPublished?.(resolvedBadge.id, name.trim() || 'Player')
+        onPublished?.(resolvedBadge.id, name.trim() || t('common.player'))
         return
       }
 
@@ -365,7 +378,7 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
       a.remove()
       URL.revokeObjectURL(url)
       setStatus('published')
-      onPublished?.(resolvedBadge.id, name.trim() || 'Player')
+      onPublished?.(resolvedBadge.id, name.trim() || t('common.player'))
     } catch (err) {
       // AbortError just means the player closed the native share sheet --
       // not a real failure, don't show an error state for it.
@@ -397,12 +410,12 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
           </span>
         ))}
         <div className="badge-modal badge-modal--choice badge-modal--reveal">
-          <button className="badge-modal-close" onClick={onClose} aria-label="Close">✕</button>
+          <button className="badge-modal-close" onClick={onClose} aria-label={t('badge.close')}>✕</button>
 
           <div className="badge-modal-ribbon">
-            <span>🎉 Achievement unlocked</span>
+            <span>{t('badge.achievementUnlocked')}</span>
           </div>
-          <h3 className="badge-choice-prompt">{badge.prompt || 'Choose your title'}</h3>
+          <h3 className="badge-choice-prompt">{badge.prompt || t('badge.chooseYourTitle')}</h3>
 
           <div className="badge-choice-grid">
             {badge.options.map((opt) => (
@@ -421,7 +434,7 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
           </div>
 
           <button className="badge-modal-skip-btn" onClick={onClose}>
-            Skip
+            {t('badge.skip')}
           </button>
         </div>
       </div>
@@ -444,10 +457,10 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
       ))}
 
       <div className="badge-modal badge-modal--reveal">
-        <button className="badge-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button className="badge-modal-close" onClick={onClose} aria-label={t('badge.close')}>✕</button>
 
         <div className="badge-modal-ribbon">
-          <span>🏆 Achievement unlocked</span>
+          <span>{t('badge.achievementUnlockedTrophy')}</span>
         </div>
 
         <div className="badge-modal-canvas-frame">
@@ -460,7 +473,7 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
         </div>
 
         <label className="badge-modal-label" htmlFor="badge-name-input">
-          Name on your badge
+          {t('badge.nameOnBadge')}
         </label>
         <input
           id="badge-name-input"
@@ -469,7 +482,7 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
           value={name}
           maxLength={28}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
+          placeholder={t('badge.enterYourName')}
         />
 
         <div className="badge-modal-actions">
@@ -478,15 +491,15 @@ export default function BadgeModal({ badge, defaultName, onClose, onPublished })
             onClick={handlePublish}
             disabled={status === 'publishing'}
           >
-            {status === 'publishing' ? 'Preparing…' : status === 'published' ? '✓ Shared — Publish Again' : '📤 Publish & Share'}
+            {status === 'publishing' ? t('badge.preparing') : status === 'published' ? t('badge.sharedPublishAgain') : t('badge.publishAndShare')}
           </button>
           <button className="badge-modal-skip-btn" onClick={onClose}>
-            Skip
+            {t('badge.skip')}
           </button>
         </div>
 
         {status === 'error' && (
-          <p className="badge-modal-error">Couldn't share that just now — try again in a moment.</p>
+          <p className="badge-modal-error">{t('badge.shareError')}</p>
         )}
       </div>
     </div>

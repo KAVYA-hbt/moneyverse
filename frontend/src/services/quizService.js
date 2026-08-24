@@ -20,7 +20,8 @@ export async function generateQuizFromBackend({
           name: userProfile?.name || 'Kavya',
           scenario: userProfile?.scenario || 'student',
           state: userProfile?.state || 'Tamil Nadu',
-          district: userProfile?.district || 'Chennai'
+          district: userProfile?.district || 'Chennai',
+          language: userProfile?.language || 'en',
         },
         quest_context: questContext,
         performance_state: performanceState

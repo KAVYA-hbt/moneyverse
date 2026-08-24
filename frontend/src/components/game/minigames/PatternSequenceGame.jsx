@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MiniGameShell from './MiniGameShell.jsx'
+import { useLanguage } from '../../../i18n/LanguageContext.jsx'
 
 const TILE_COLORS = ['#ef4444', '#22d3ee', '#fbbf24', '#8b5cf6']
 const ROUNDS_TO_WIN = 4
@@ -8,6 +9,7 @@ const SHOW_TILE_MS = 500
 const GAP_MS = 250
 
 export default function PatternSequenceGame({ onClose, onComplete }) {
+  const { t } = useLanguage()
   const [round, setRound] = useState(1)
   const [sequence, setSequence] = useState([])
   const [playerIndex, setPlayerIndex] = useState(0)
@@ -60,7 +62,7 @@ export default function PatternSequenceGame({ onClose, onComplete }) {
       if (nextIndex === sequence.length) {
         if (round >= ROUNDS_TO_WIN) {
           setPhase('success')
-          setResult({ success: true, message: `Perfect sequence, ${ROUNDS_TO_WIN} rounds deep!` })
+          setResult({ success: true, message: t('minigames.perfectSequence', { rounds: ROUNDS_TO_WIN }) })
         } else {
           setPhase('idle')
           setRound((r) => r + 1)
@@ -73,7 +75,7 @@ export default function PatternSequenceGame({ onClose, onComplete }) {
       setLives(remainingLives)
       if (remainingLives <= 0) {
         setPhase('fail')
-        setResult({ success: false, message: "The pattern got away this time — try again later." })
+        setResult({ success: false, message: t('minigames.patternFail') })
       } else {
         // Retry the SAME round rather than ending the game outright —
         // keeps this low-frustration for a quick hunger-break game.
@@ -88,11 +90,25 @@ export default function PatternSequenceGame({ onClose, onComplete }) {
     onClose?.()
   }
 
+  // Banks whatever round they'd reached as a completed (reduced-reward)
+  // task instead of forcing them to either clear all 4 rounds or run out
+  // of lives.
+  const handleFinishEarly = () => {
+    clearTimeouts()
+    setResult({
+      success: true,
+      skipped: true,
+      round,
+      message: t('minigames.patternSequencePartial', { round }),
+    })
+  }
+
   return (
     <MiniGameShell
-      title="Pattern Sequence"
-      instructions="Watch the tiles light up, then tap them back in the same order."
+      title={t('minigames.patternSequenceLabel')}
+      instructions={t('minigames.patternSequenceInstructions')}
       onClose={handleFinalClose}
+      onFinish={handleFinishEarly}
       result={result}
     >
       <div className="ps-grid">
@@ -107,8 +123,8 @@ export default function PatternSequenceGame({ onClose, onComplete }) {
         ))}
       </div>
       <p className="ps-status">
-        {phase === 'showing' && 'Watch closely...'}
-        {phase === 'input' && `Your turn — round ${round}/${ROUNDS_TO_WIN}`}
+        {phase === 'showing' && t('minigames.watchClosely')}
+        {phase === 'input' && t('minigames.yourTurnRound', { round, total: ROUNDS_TO_WIN })}
       </p>
       <p className="ps-lives">{'❤️'.repeat(lives)}{'🖤'.repeat(STARTING_LIVES - lives)}</p>
     </MiniGameShell>

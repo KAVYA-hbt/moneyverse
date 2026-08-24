@@ -1,3 +1,5 @@
+import { resolveLocalized } from '../i18n/dataLocalization.js'
+
 // Single source of truth for the 5-level, 25-quest curriculum.
 //
 // Design notes / assumptions (flag these to the team if they need adjusting):
@@ -91,7 +93,97 @@ export const QUEST_REWARDS = Object.fromEntries(
   ])
 )
 
-export function getLevelInfo(completedCount) {
+export function getLevelInfo(completedCount, language = 'en') {
   const idx = Math.min(Math.floor(completedCount / 5), LEVELS.length - 1)
-  return LEVELS[idx]
+  const info = LEVELS[idx]
+  return { ...info, title: resolveLocalized(LEVEL_TITLES_BY_LEVEL, LEVEL_TITLE_TRANSLATIONS, info.level, language) }
+}
+
+// --- Localization overlays -- only `label` (quest building names) and
+// level `title`s are ever translated here; `topic` is sent to the backend
+// as LLM context (see SYSTEM_PROMPT in main.py) and is never shown to the
+// player, so it deliberately stays in English in every language. ---
+
+const LEVEL_TITLES_BY_LEVEL = Object.fromEntries(LEVELS.map((l) => [l.level, l.title]))
+
+const LEVEL_TITLES_HI = {
+  1: 'नवागंतुक',
+  2: 'खोजकर्ता',
+  3: 'उपलब्धिकर्ता',
+  4: 'विशेषज्ञ',
+  5: 'SBI मास्टर',
+}
+const LEVEL_TITLES_TA = {
+  1: 'புதியவர்',
+  2: 'ஆய்வாளர்',
+  3: 'சாதனையாளர்',
+  4: 'நிபுணர்',
+  5: 'SBI மாஸ்டர்',
+}
+const LEVEL_TITLE_TRANSLATIONS = { hi: LEVEL_TITLES_HI, ta: LEVEL_TITLES_TA }
+
+const QUEST_LABELS_HI = {
+  aadhaar: 'नगरपालिका कार्यालय',
+  pan: 'PAN सेवा केंद्र',
+  bank: 'SBI बैंक शाखा',
+  store: 'स्थानीय दुकान',
+  hospital: 'शहर अस्पताल',
+  salary_slip: 'कार्यस्थल',
+  atm_pin: 'ATM कियोस्क',
+  upi_payment: 'UPI भुगतान काउंटर',
+  passbook: 'पासबुक काउंटर',
+  cheque_book: 'चेक बुक डेस्क',
+  net_banking: 'नेट बैंकिंग केंद्र',
+  fixed_deposit: 'FD काउंटर',
+  recurring_deposit: 'RD काउंटर',
+  credit_score: 'क्रेडिट ब्यूरो कार्यालय',
+  loan_basics: 'ऋण कार्यालय',
+  insurance: 'बीमा कार्यालय',
+  otp_safety: 'सुरक्षा डेस्क',
+  phishing_awareness: 'साइबर सेल',
+  upi_fraud: 'धोखाधड़ी हेल्पडेस्क',
+  mobile_banking: 'मोबाइल बैंकिंग कियोस्क',
+  atm_safety: 'ATM सुरक्षा केंद्र',
+  tax_filing: 'कर कार्यालय',
+  mutual_funds: 'निवेश डेस्क',
+  retirement_planning: 'पेंशन कार्यालय',
+  credit_card_usage: 'क्रेडिट कार्ड केंद्र',
+  budgeting: 'वित्तीय योजना कार्यालय',
+}
+const QUEST_LABELS_TA = {
+  aadhaar: 'நகராட்சி அலுவலகம்',
+  pan: 'PAN சேவை மையம்',
+  bank: 'SBI வங்கி கிளை',
+  store: 'உள்ளூர் கடை',
+  hospital: 'நகர மருத்துவமனை',
+  salary_slip: 'பணியிடம்',
+  atm_pin: 'ATM கியோஸ்க்',
+  upi_payment: 'UPI கட்டண கவுண்டர்',
+  passbook: 'பாஸ்புக் கவுண்டர்',
+  cheque_book: 'செக் புத்தக டெஸ்க்',
+  net_banking: 'நெட் பேங்கிங் மையம்',
+  fixed_deposit: 'FD கவுண்டர்',
+  recurring_deposit: 'RD கவுண்டர்',
+  credit_score: 'கிரெடிட் பீரோ அலுவலகம்',
+  loan_basics: 'கடன் அலுவலகம்',
+  insurance: 'காப்பீட்டு அலுவலகம்',
+  otp_safety: 'பாதுகாப்பு டெஸ்க்',
+  phishing_awareness: 'சைபர் செல்',
+  upi_fraud: 'மோசடி ஹெல்ப்டெஸ்க்',
+  mobile_banking: 'மொபைல் பேங்கிங் கியோஸ்க்',
+  atm_safety: 'ATM பாதுகாப்பு மையம்',
+  tax_filing: 'வரி அலுவலகம்',
+  mutual_funds: 'முதலீட்டு டெஸ்க்',
+  retirement_planning: 'ஓய்வூதிய அலுவலகம்',
+  credit_card_usage: 'கிரெடிட் கார்டு மையம்',
+  budgeting: 'நிதி திட்டமிடல் அலுவலகம்',
+}
+
+export function getQuestLabels(language = 'en') {
+  if (language === 'en') return QUEST_LABELS
+  const overlay = language === 'hi' ? QUEST_LABELS_HI : language === 'ta' ? QUEST_LABELS_TA : null
+  if (!overlay) return QUEST_LABELS
+  return Object.fromEntries(
+    Object.keys(QUEST_LABELS).map((id) => [id, overlay[id] || QUEST_LABELS[id]])
+  )
 }

@@ -22,6 +22,7 @@ export function getUserProfile() {
       // right there in localStorage the whole time.
       companionId: latest.companionId || null,
       companionName: latest.companionName || null,
+      language: latest.language || getLanguage(),
       createdAt: latest.createdAt || new Date().toISOString(),
     }
   }
@@ -39,6 +40,7 @@ export function getUserProfile() {
     selectedAvatar: null,
     companionId: null,
     companionName: null,
+    language: getLanguage(),
     createdAt: new Date().toISOString(),
   }
 }
@@ -91,6 +93,39 @@ export function saveUserProfile(profileData) {
   window.dispatchEvent(new Event('userProfileChanged'))
 
   return newProfileEntry
+}
+
+const LANGUAGE_KEY = 'sbi_questcraft_language'
+const SUPPORTED_LANGUAGES = ['en', 'hi', 'ta']
+
+// Vernacular language preference (English/Hindi/Tamil) — kept as its own
+// key (not just a profile field) so it's readable before any profile
+// exists yet (e.g. on the onboarding screen itself), and defaults to 'en'.
+export function getLanguage() {
+  try {
+    const saved = localStorage.getItem(LANGUAGE_KEY)
+    return SUPPORTED_LANGUAGES.includes(saved) ? saved : 'en'
+  } catch {
+    return 'en'
+  }
+}
+
+// Persists the language choice and folds it into the profile (so it rides
+// along in profile history / backend sync payloads alongside name, email,
+// etc.), then notifies both the language-specific and general profile
+// listeners so any open screen updates live without a refresh.
+export function setLanguage(lang) {
+  const resolved = SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en'
+  try {
+    localStorage.setItem(LANGUAGE_KEY, resolved)
+  } catch {
+    // ignore storage errors
+  }
+  if (getAllUserProfiles().length > 0) {
+    saveUserProfile({ language: resolved })
+  }
+  window.dispatchEvent(new Event('languageChanged'))
+  return resolved
 }
 
 // Log game interactions specific to the active user's identity

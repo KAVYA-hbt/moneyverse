@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Player Profile: Aarav Sharma</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#c4c1fb",
+                        "tertiary-container": "#331d00",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#e3dfff",
+                        "surface-container": "#eceef0",
+                        "outline-variant": "#c8c5d0",
+                        "primary": "#070235",
+                        "on-surface": "#191c1e",
+                        "tertiary-fixed": "#ffddb8",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#47464f",
+                        "secondary-fixed": "#71f8e4",
+                        "on-secondary-container": "#006f64",
+                        "on-secondary-fixed-variant": "#005048",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#181445",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-background": "#191c1e",
+                        "primary-fixed-dim": "#c4c1fb",
+                        "surface": "#f7f9fb",
+                        "on-tertiary-fixed": "#2a1700",
+                        "tertiary": "#140900",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f7f9fb",
+                        "outline": "#787680",
+                        "primary-container": "#1e1b4b",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-container": "#c07a00",
+                        "on-primary-container": "#8683ba",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-tint": "#5b598c",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#00201c",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#4fdbc8",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "secondary-container": "#6df5e1",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary": "#006b5f",
+                        "on-primary-fixed-variant": "#444173"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "md": "16px",
+                        "gutter": "24px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-md": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "title-lg": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full p-md gap-sm bg-surface-container dark:bg-surface-container-highest fixed left-0 top-0 w-[260px] z-20">
+<div class="mb-lg px-sm pt-sm">
+<h1 class="font-title-lg text-title-lg font-black text-primary dark:text-primary-fixed">Analyst</h1>
+<p class="text-xs text-on-surface-variant dark:text-on-surface-variant font-label-md tracking-wider uppercase mt-1">Admin Console</p>
+<p class="text-[10px] text-outline mt-0.5">Strategic Ops</p>
+</div>
+<div class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-dim transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary-container text-on-primary-container dark:bg-primary-fixed-dim dark:text-on-primary-fixed hover:bg-surface-container-high dark:hover:bg-surface-dim transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined fill-icon" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">Player Analysis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-dim transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="gavel">gavel</span>
+<span class="font-label-md text-label-md">Compliance</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-dim transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-label-md text-label-md">Risk Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-dim transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-label-md text-label-md">Advisory</span>
+</a>
+</div>
+<div class="mt-auto pt-4 border-t border-outline-variant">
+<div class="flex items-center gap-3 px-3 py-2">
+<img class="w-8 h-8 rounded-full bg-surface-variant object-cover" data-alt="A small, professional corporate logo avatar placeholder with a subtle abstract tech design in deep indigo and white." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpbT2lqCE4fJjW15Ky_SHCQObH9KmB_ZvSspdd7cRBshjFIj8GJqpeSgmpgclTcJCwesjhklGjsdXtI8dXX9PJn3a6qmoQ7JG3ScalMpqHKIEz61q-lkPLyUlBOCUBM7Q7kGelK3NLB3wGliQyy-6qhSf43VuUGo_-ZDvV54_mk9l46dl68UhWyY9Jix9U9dr9DBuLyeSlNwt6F_ryvOU8lgpgwnoSN_d7oe8IRTNea6dYqKnNGmFx"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Analyst Profile</p>
+<p class="text-[10px] text-on-surface-variant">Lvl 3 Access</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-[260px] flex flex-col h-full overflow-hidden relative">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-lg py-sm bg-surface-container-lowest dark:bg-surface-container-lowest docked full-width top-0 border-b border-surface-variant dark:border-outline-variant shadow-sm z-10">
+<div class="flex items-center gap-md">
+<button class="md:hidden text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="flex items-center gap-3">
+<h2 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed hidden md:block">Analyst</h2>
+<span class="hidden md:inline-block h-6 w-px bg-outline-variant"></span>
+<h3 class="font-title-md text-title-md text-on-surface">Player Profile: Aarav Sharma (ID: FG-9921)</h3>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="hidden lg:flex items-center bg-surface-container-low border border-outline-variant rounded-full px-3 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-outline text-[20px] mr-2" data-icon="search">search</span>
+<input class="bg-transparent border-none outline-none text-body-md text-on-surface placeholder:text-outline w-48 focus:ring-0 p-0" placeholder="Search profiles..." type="text"/>
+</div>
+<div class="flex items-center ml-2 gap-1">
+<button aria-label="notifications" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button aria-label="settings" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button aria-label="help" class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<div class="flex-1 overflow-y-auto p-4 md:p-lg pb-24">
+<div class="max-w-[1440px] mx-auto flex flex-col gap-lg">
+<!-- Header Strip -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05)] p-md flex flex-col md:flex-row items-start md:items-center justify-between gap-md relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-full bg-gradient-to-l from-primary-fixed-dim/20 to-transparent pointer-events-none"></div>
+<div class="flex items-center gap-md z-10">
+<div class="relative">
+<img class="w-16 h-16 rounded-full border-2 border-surface object-cover shadow-sm" data-alt="A professional close-up portrait photograph of a young Indian male in his late 20s, Aarav Sharma, wearing a smart-casual dark navy shirt. The lighting is soft studio lighting with a neutral gray background, portraying a serious, professional demeanor suitable for a fintech profile. Shot on a 85mm lens, sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyZTMTqq0-jgFmyJXwi-xZ_YiXcETYyeh43BKM0EgW7z4k3sXuqKaWB10z1wr8US-TxwWeGVa_rqtlpdGXAlgYINKsv9HLV9AsYNU5VtuO9_9rbelYxPEqbK5yAyAKMGhO0QRsWZi1pbA_R-FBMMB5ifUwRQak_-ykPl5RUL7f8mhBcO1bLrRbraYMGle6H4P9CAptzcM402SFThLs6pUjJJ_XRBLN2RGK5ZQGKTMrOzbtD0L8b-sp"/>
+<div class="absolute -bottom-1 -right-1 bg-surface-container-lowest rounded-full p-0.5 border border-outline-variant">
+<span class="material-symbols-outlined text-[14px] text-tertiary-container fill-icon" data-icon="verified">verified</span>
+</div>
+</div>
+<div>
+<div class="flex items-baseline gap-2">
+<h1 class="font-headline-lg text-headline-lg text-on-surface m-0">Aarav Sharma</h1>
+<span class="font-label-md text-label-md text-outline">ID: FG-9921</span>
+</div>
+<div class="flex items-center gap-4 mt-1">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-md text-body-md text-xs">Joined: Jan 12, 2024</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="font-body-md text-body-md text-xs">Last Active: 2h ago</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[14px] fill-icon" data-icon="star">star</span>
+<span class="font-label-md text-label-md">Level 14</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-start md:items-end gap-3 z-10 w-full md:w-auto">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-[10px] uppercase tracking-wider border border-outline-variant/50">Saver</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-[10px] uppercase tracking-wider border border-outline-variant/50">Risk-Averse</span>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-[10px] uppercase tracking-wider border border-outline-variant/50">Advice-Dependent</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E0F2F1] text-[#00695C] border border-[#B2DFDB]">
+<span class="material-symbols-outlined text-[16px] fill-icon" data-icon="shield">shield</span>
+<span class="font-label-md text-label-md">Profile Confidence: High</span>
+</div>
+</div>
+</div>
+<!-- Three Column Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Column 1: Game Profile (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<!-- Radar Chart Card -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-md shadow-sm">
+<h3 class="font-title-md text-title-md text-on-surface mb-4 flex items-center gap-2 border-b border-surface-variant pb-2">
+<span class="material-symbols-outlined text-primary" data-icon="radar">radar</span>
+                                Competency Radar
+                            </h3>
+<div class="relative w-full h-48 flex items-center justify-center">
+<!-- Placeholder for Chart.js -->
+<canvas id="radarChart"></canvas>
+</div>
+</div>
+<!-- Quest Timeline Card -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-md shadow-sm">
+<div class="flex justify-between items-center mb-4 border-b border-surface-variant pb-2">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="timeline">timeline</span>
+                                    Recent Quests
+                                </h3>
+<button class="text-primary hover:text-primary-container text-xs font-label-md">View All</button>
+</div>
+<div class="relative pl-4 border-l-2 border-surface-container-highest space-y-6">
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-secondary"></div>
+<p class="font-label-md text-label-md text-on-surface">Tax Filing Sim</p>
+<div class="flex items-center justify-between mt-1">
+<p class="font-body-md text-xs text-outline">Feb 20</p>
+<span class="text-xs font-label-md text-secondary bg-[#E0F2F1] px-1.5 py-0.5 rounded">100% Score</span>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-secondary-container border border-secondary"></div>
+<p class="font-label-md text-label-md text-on-surface">Emergency Fund Setup</p>
+<div class="flex items-center justify-between mt-1">
+<p class="font-body-md text-xs text-outline">Feb 15</p>
+<span class="text-xs font-label-md text-on-surface-variant bg-surface-container-high px-1.5 py-0.5 rounded">85% Score</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Behavioral Flags -->
+<div class="bg-[#FFF8E1] rounded-lg border border-[#FFE082] p-md shadow-sm">
+<h3 class="font-title-md text-title-md text-[#F57F17] mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined fill-icon" data-icon="flag">flag</span>
+                                Behavioral Flags
+                            </h3>
+<div class="space-y-2">
+<div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded border border-[#FFECB3]">
+<span class="font-body-md text-body-md text-[#5D4037]">Panic-sell instances</span>
+<span class="font-label-md text-label-md text-[#D84315] bg-[#FFCCBC] px-2 py-0.5 rounded-full">x2</span>
+</div>
+<div class="flex items-center justify-between bg-white/60 px-3 py-2 rounded border border-[#FFECB3]">
+<span class="font-body-md text-body-md text-[#5D4037]">Over-leverage attempts</span>
+<span class="font-label-md text-label-md text-[#F57F17] bg-[#FFE082] px-2 py-0.5 rounded-full">x1</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 2: Psychometric Profile (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-md shadow-sm flex-1">
+<h3 class="font-title-md text-title-md text-on-surface mb-4 flex items-center gap-2 border-b border-surface-variant pb-2">
+<span class="material-symbols-outlined text-primary" data-icon="psychology">psychology</span>
+                                Psychometric Profile
+                            </h3>
+<div class="space-y-5">
+<!-- Metric 1 -->
+<div>
+<div class="flex justify-between items-end mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Loss Aversion</label>
+<span class="font-body-md text-xs text-on-surface font-semibold">High (82)</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 82%"></div>
+</div>
+</div>
+<!-- Metric 2 -->
+<div>
+<div class="flex justify-between items-end mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Decision Speed</label>
+<span class="font-body-md text-xs text-on-surface font-semibold">Slow (35)</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-surface-tint rounded-full" style="width: 35%"></div>
+</div>
+</div>
+<!-- Metric 3 -->
+<div>
+<div class="flex justify-between items-end mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Bias Susceptibility</label>
+<span class="font-body-md text-xs text-on-surface font-semibold">Med (55)</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-surface-tint rounded-full" style="width: 55%"></div>
+</div>
+</div>
+<!-- Metric 4 -->
+<div>
+<div class="flex justify-between items-end mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Time Preference</label>
+<span class="font-body-md text-xs text-on-surface font-semibold">Present (70)</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden flex relative">
+<div class="absolute w-0.5 h-3 bg-outline top-[0.5px] left-1/2 -mt-[2px] z-10"></div>
+<div class="h-full bg-tertiary-fixed-dim rounded-l-full" style="width: 70%"></div>
+</div>
+</div>
+<!-- Metric 5 -->
+<div>
+<div class="flex justify-between items-end mb-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Advice-Dependence</label>
+<span class="font-body-md text-xs text-on-surface font-semibold">High (88)</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 88%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-4 border-t border-surface-variant">
+<p class="font-label-md text-xs text-outline mb-2 uppercase tracking-wide">Trait Summary Tags</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container text-on-surface font-body-md text-xs rounded border border-outline-variant/30">Cautious Planner</span>
+<span class="px-3 py-1 bg-surface-container text-on-surface font-body-md text-xs rounded border border-outline-variant/30">Present-Biased</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Advisory Side (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-lg">
+<!-- Mismatch Alert -->
+<div class="bg-[#FFF3E0] rounded-lg border-l-4 border-l-[#FF9800] border-y border-r border-y-[#FFE0B2] border-r-[#FFE0B2] p-md shadow-sm relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-[80px]" data-icon="warning">warning</span>
+</div>
+<h3 class="font-title-md text-title-md text-[#E65100] mb-2 flex items-center gap-2 relative z-10">
+<span class="material-symbols-outlined" data-icon="error">error</span>
+                                Mismatch Alert
+                            </h3>
+<p class="font-body-md text-body-md text-[#5D4037] relative z-10">
+                                Player profile shows low risk tolerance, but recently asked about crypto 3 times via in-game advisor.
+                            </p>
+<div class="mt-3 relative z-10">
+<button class="text-xs font-label-md text-[#E65100] hover:underline">Investigate Dialog Logs</button>
+</div>
+</div>
+<!-- Recommendations -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-md shadow-sm">
+<h3 class="font-title-md text-title-md text-on-surface mb-3 flex items-center gap-2 border-b border-surface-variant pb-2">
+<span class="material-symbols-outlined text-primary" data-icon="lightbulb">lightbulb</span>
+                                Next Best Actions
+                            </h3>
+<ul class="space-y-3 mt-4">
+<li class="flex items-start gap-3 hover:bg-surface p-2 -mx-2 rounded transition-colors group">
+<div class="mt-0.5 text-secondary">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_circle">add_circle</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-medium">Increase Term Insurance</p>
+<p class="text-xs text-on-surface-variant mt-0.5">Push "Life Events" scenario module to emphasize protection.</p>
+</div>
+<button class="ml-auto opacity-0 group-hover:opacity-100 text-outline hover:text-primary transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="send">send</span>
+</button>
+</li>
+<li class="flex items-start gap-3 hover:bg-surface p-2 -mx-2 rounded transition-colors group">
+<div class="mt-0.5 text-secondary">
+<span class="material-symbols-outlined text-[18px]" data-icon="call_split">call_split</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-medium">Diversify from Small Cap</p>
+<p class="text-xs text-on-surface-variant mt-0.5">High concentration detected in recent portfolio sim.</p>
+</div>
+<button class="ml-auto opacity-0 group-hover:opacity-100 text-outline hover:text-primary transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="send">send</span>
+</button>
+</li>
+</ul>
+</div>
+<!-- Compliance Panel -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-md shadow-sm mt-auto">
+<h3 class="font-title-md text-title-md text-on-surface mb-3 flex items-center gap-2 border-b border-surface-variant pb-2">
+<span class="material-symbols-outlined text-outline" data-icon="gavel">gavel</span>
+                                Compliance &amp; Data
+                            </h3>
+<div class="space-y-3 mt-3">
+<div class="flex justify-between items-center py-1 border-b border-surface-variant/50">
+<span class="font-body-md text-body-md text-on-surface-variant">Consent Status</span>
+<span class="font-label-md text-xs text-secondary flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Active
+                                    </span>
+</div>
+<div class="flex justify-between items-center py-1 border-b border-surface-variant/50">
+<span class="font-body-md text-body-md text-on-surface-variant">DPDP Categories</span>
+<span class="font-body-md text-xs text-on-surface">Standard, Fin-Analytics</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<span class="font-body-md text-body-md text-on-surface-variant">Minor-flag</span>
+<span class="font-label-md text-xs text-outline px-1.5 py-0.5 bg-surface-container rounded">No</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- BottomNavBar (Action Bar for Desktop/Mobile) -->
+<div class="fixed bottom-0 md:left-[260px] left-0 right-0 h-16 flex justify-around md:justify-end items-center px-lg bg-surface-container-low dark:bg-inverse-surface border-t border-outline-variant dark:border-outline shadow-lg z-50 md:gap-4 rounded-t-xl md:rounded-none">
+<button class="flex md:hidden flex-col items-center justify-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-full h-full">
+<span class="material-symbols-outlined text-[20px]" data-icon="picture_as_pdf">picture_as_pdf</span>
+<span class="font-label-md text-[10px]">Export</span>
+</button>
+<button class="flex md:hidden flex-col items-center justify-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-full h-full border-l border-outline-variant/30">
+<span class="material-symbols-outlined text-[20px]" data-icon="flag">flag</span>
+<span class="font-label-md text-[10px]">Flag</span>
+</button>
+<button class="flex md:hidden flex-col items-center justify-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-full h-full border-l border-outline-variant/30">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+<span class="font-label-md text-[10px]">Edit</span>
+</button>
+<!-- Desktop Actions -->
+<button class="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container transition-colors font-label-md text-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="picture_as_pdf">picture_as_pdf</span>
+                Export Snapshot
+            </button>
+<button class="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container transition-colors font-label-md text-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+                Edit/Override Field
+            </button>
+<button class="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-error-container text-on-error-container hover:opacity-90 transition-opacity font-label-md text-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="flag">flag</span>
+                Flag for Review
+            </button>
+<div class="hidden md:block w-px h-8 bg-outline-variant mx-2"></div>
+<button aria-label="audit log" class="hidden md:flex p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+</div>
+</main>
+<script>
+        // Initialize Radar Chart using Chart.js
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            
+            // Tailwind primary color mapping for JS
+            const primaryColor = 'rgba(30, 27, 75, 0.8)'; // text-primary-container approx
+            const primaryBg = 'rgba(30, 27, 75, 0.2)';
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Budgeting', 'Savings', 'Credit & Debt', 'Investment', 'Insurance', 'Tax'],
+                    datasets: [{
+                        label: 'Competency Score',
+                        data: [75, 88, 65, 45, 90, 85],
+                        backgroundColor: primaryBg,
+                        borderColor: primaryColor,
+                        pointBackgroundColor: primaryColor,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: primaryColor,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: 'rgba(200, 197, 208, 0.3)' // outline-variant approx
+                            },
+                            grid: {
+                                color: 'rgba(200, 197, 208, 0.3)'
+                            },
+                            pointLabels: {
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 10,
+                                    weight: '600'
+                                },
+                                color: '#47464f' // on-surface-variant
+                            },
+                            ticks: {
+                                display: false,
+                                min: 0,
+                                max: 100
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(25, 28, 30, 0.9)',
+                            titleFont: { family: "'Inter', sans-serif", size: 12 },
+                            bodyFont: { family: "'Inter', sans-serif", size: 12 },
+                            padding: 10,
+                            cornerRadius: 4,
+                            displayColors: false
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body></html>

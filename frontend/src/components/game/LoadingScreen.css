@@ -60,13 +60,14 @@
 
 .moving-line {
   position: absolute;
-  width: 5px; 
-  height: 120px; 
+  width: 5px;
+  height: 120px;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(167, 139, 250, 0.9));
   border-radius: 4px;
   top: -150px;
-  transform: none; 
+  transform: none;
   animation: warpSpeed linear infinite;
+  will-change: transform;
 }
 
 @keyframes warpSpeed {
@@ -237,14 +238,21 @@
 
 .crawl-text {
   position: absolute;
+  /* Starting position is set once via `top` (a normal layout property) --
+     the animation itself below only ever touches `transform`, so the
+     browser can run it entirely on the compositor instead of re-laying-out
+     this whole (long, justified) text block on every single frame, which
+     is what was causing the stutter/laginess while it scrolled. */
   top: 100%;
   width: 100%;
-  color: #feda4a; 
-  font-size: 2.6rem; 
+  color: #feda4a;
+  font-size: 2.6rem;
   font-weight: 700;
   line-height: 1.7;
   text-align: justify;
   transform-origin: 50% 100%;
+  will-change: transform;
+  backface-visibility: hidden;
   /* Plays through ONCE and holds at the end -- this used to be
      `infinite`, which meant the crawl could never actually finish; now it
      genuinely reaches its conclusion and waits there for the player to
@@ -277,12 +285,18 @@
 
 @keyframes crawl {
   0% {
-    top: 100%;
-    transform: rotateX(25deg) translateZ(0);
+    transform: rotateX(25deg) translateY(0);
   }
   100% {
-    top: -100%;
-    transform: rotateX(25deg) translateY(-2500px);
+    /* Same total travel as before (top: 100% -> -100%, i.e. 200% of the
+       container's height -- which is 100vh, see .star-wars-intro/
+       .crawl-container -- plus the original extra -2500px), just expressed
+       as a single transform instead of animating `top` + `transform`
+       together. translateY's own percentage would resolve against this
+       element's OWN height (much taller than the viewport, since it holds
+       the whole crawl), so vh is used here instead to match the old
+       container-relative math. */
+    transform: rotateX(25deg) translateY(calc(-200vh - 2500px));
   }
 }
 

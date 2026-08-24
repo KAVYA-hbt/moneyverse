@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { DIALOGUE_BEATS } from '../data/companionDialogue.js'
+import { getDialogueBeat } from '../data/companionDialogue.js'
 
 const HOLD_MS = 3400 // how long each line stays up before advancing/fading
 
@@ -23,14 +23,14 @@ const HOLD_MS = 3400 // how long each line stays up before advancing/fading
  * that needs a real decision (NPC greetings, the mayor ceremony, product
  * funnel check-ins) still belongs on the full CompanionDialogueModal.
  */
-export function useCompanionNudge() {
+export function useCompanionNudge(language = 'en') {
   const [lines, setLines] = useState([])
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(false)
   const timeoutRef = useRef(null)
 
   const show = useCallback((beatOrId, ctx = {}) => {
-    const beat = typeof beatOrId === 'string' ? DIALOGUE_BEATS[beatOrId] : beatOrId
+    const beat = typeof beatOrId === 'string' ? getDialogueBeat(beatOrId, language) : beatOrId
     if (!beat) {
       console.warn(`[useCompanionNudge] Unknown beat: "${beatOrId}"`)
       return
@@ -58,7 +58,7 @@ export function useCompanionNudge() {
     setLines(cleanLines)
     setIndex(0)
     setVisible(true)
-  }, [])
+  }, [language])
 
   const dismiss = useCallback(() => {
     clearTimeout(timeoutRef.current)

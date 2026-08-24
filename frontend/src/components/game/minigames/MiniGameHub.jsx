@@ -4,13 +4,14 @@ import PatternSequenceGame from './PatternSequenceGame.jsx'
 import QuickSortGame from './QuickSortGame.jsx'
 import CashFlowCatchGame from './CashFlowCatchGame.jsx'
 import { getMiniGameProgress, recordMiniGameResult } from '../../../utils/minigameStorage.js'
+import { useLanguage } from '../../../i18n/LanguageContext.jsx'
 import './MiniGames.css'
 
 const GAME_OPTIONS = [
-  { id: 'memory_match', label: 'Memory Match', icon: '\ud83e\udde0', Component: MemoryMatchGame },
-  { id: 'pattern_sequence', label: 'Pattern Sequence', icon: '\ud83c\udfa8', Component: PatternSequenceGame },
-  { id: 'quick_sort', label: 'Quick Sort', icon: '\u26a1', Component: QuickSortGame },
-  { id: 'cash_flow_catch', label: 'Cash Flow Catch', icon: '\ud83d\udcb0', Component: CashFlowCatchGame },
+  { id: 'memory_match', labelKey: 'minigames.memoryMatchLabel', icon: '\ud83e\udde0', Component: MemoryMatchGame },
+  { id: 'pattern_sequence', labelKey: 'minigames.patternSequenceLabel', icon: '\ud83c\udfa8', Component: PatternSequenceGame },
+  { id: 'quick_sort', labelKey: 'minigames.quickSortLabel', icon: '\u26a1', Component: QuickSortGame },
+  { id: 'cash_flow_catch', labelKey: 'minigames.cashFlowCatchLabel', icon: '\ud83d\udcb0', Component: CashFlowCatchGame },
 ]
 
 /**
@@ -21,6 +22,7 @@ const GAME_OPTIONS = [
  * entirely, caller's choice via onExit).
  */
 export default function MiniGameHub({ sanitizedUser, onExit, onReward, forcedGameId = null }) {
+  const { t } = useLanguage()
   const [progress, setProgress] = useState(() => getMiniGameProgress(sanitizedUser))
   // If launched from a specific world location (one of the 3 spread-out
   // spawn points -- see GamePage.jsx), that location already implies
@@ -61,8 +63,8 @@ export default function MiniGameHub({ sanitizedUser, onExit, onReward, forcedGam
   return (
     <div className="mgh-overlay">
       <div className="mgh-modal">
-        <p className="mgh-eyebrow">Pure puzzles — nothing banking-related here.</p>
-        <h2 className="mgh-title">Pick a Mini-Game</h2>
+        <p className="mgh-eyebrow">{t('minigames.hubEyebrow')}</p>
+        <h2 className="mgh-title">{t('minigames.hubTitle')}</h2>
         <div className="mgh-list">
           {GAME_OPTIONS.map((opt) => {
             const entry = progress[opt.id]
@@ -70,15 +72,15 @@ export default function MiniGameHub({ sanitizedUser, onExit, onReward, forcedGam
               <button key={opt.id} className="mgh-option" onClick={() => setActiveGameId(opt.id)}>
                 <span className="mgh-option-icon">{opt.icon}</span>
                 <span className="mgh-option-text">
-                  <span className="mgh-option-label">{opt.label}</span>
-                  <span className="mgh-option-level">Level {entry?.unlockedLevel ?? 1}</span>
+                  <span className="mgh-option-label">{t(opt.labelKey)}</span>
+                  <span className="mgh-option-level">{t('minigames.hubLevel', { n: entry?.unlockedLevel ?? 1 })}</span>
                 </span>
               </button>
             )
           })}
         </div>
         <button className="mgh-close-btn" onClick={onExit}>
-          Not right now
+          {t('minigames.hubNotNow')}
         </button>
       </div>
     </div>

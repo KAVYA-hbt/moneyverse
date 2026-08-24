@@ -61,6 +61,24 @@
   gap: 12px;
 }
 
+.minigame-finish-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+  color: #a9b8d1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.minigame-finish-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #eaf1fb;
+}
+
 .minigame-result {
   display: flex;
   flex-direction: column;

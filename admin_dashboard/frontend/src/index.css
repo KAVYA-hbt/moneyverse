@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/* Design tokens ported from
+   _wireframes/stitch_finguru_admin_dashboard/fintech_administrative_interface/DESIGN.md
+   and the shared tailwind.config used across the Stitch code.html wireframes.
+   Tailwind v4 reads custom theme values from this @theme block instead of a JS config. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Material Design 3 style tonal palette used verbatim by every wireframe screen */
+  --color-primary: #070235;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1e1b4b;
+  --color-on-primary-container: #8683ba;
+  --color-primary-fixed: #e3dfff;
+  --color-primary-fixed-dim: #c4c1fb;
+  --color-on-primary-fixed: #181445;
+  --color-on-primary-fixed-variant: #444173;
+  --color-inverse-primary: #c4c1fb;
+  --color-surface-tint: #5b598c;
+
+  --color-secondary: #006b5f;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #6df5e1;
+  --color-on-secondary-container: #006f64;
+  --color-secondary-fixed: #71f8e4;
+  --color-secondary-fixed-dim: #4fdbc8;
+  --color-on-secondary-fixed: #00201c;
+  --color-on-secondary-fixed-variant: #005048;
+
+  --color-tertiary: #140900;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #331d00;
+  --color-on-tertiary-container: #c07a00;
+  --color-tertiary-fixed: #ffddb8;
+  --color-tertiary-fixed-dim: #ffb95f;
+  --color-on-tertiary-fixed: #2a1700;
+  --color-on-tertiary-fixed-variant: #653e00;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-surface: #f7f9fb;
+  --color-surface-dim: #d8dadc;
+  --color-surface-bright: #f7f9fb;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container: #eceef0;
+  --color-surface-container-high: #e6e8ea;
+  --color-surface-container-highest: #e0e3e5;
+  --color-surface-variant: #e0e3e5;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #47464f;
+  --color-inverse-surface: #2d3133;
+  --color-inverse-on-surface: #eff1f3;
+  --color-outline: #787680;
+  --color-outline-variant: #c8c5d0;
+  --color-background: #f7f9fb;
+  --color-on-background: #191c1e;
+
+  /* DESIGN.md brand accents (used for status chips / callouts on top of the tonal palette) */
+  --color-brand-teal: #14b8a6;
+  --color-brand-amber: #f59e0b;
+  --color-brand-border: #e2e8f0;
+
+  /* 4px rhythm spacing scale used across the wireframes (p-xs, gap-md, etc.) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-gutter: 24px;
+  --spacing-container-max: 1440px;
+
+  /* rounded()/rounded-lg()/rounded-xl()/rounded-full() already match the DEFAULT/lg/xl/full
+     values every wireframe's tailwind.config used (0.25rem / 0.5rem / 0.75rem / 9999px) via
+     Tailwind's own defaults, so no radius overrides are needed here. */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+}
+
+/* Material Symbols Outlined boilerplate (Google's recommended base class) */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+.material-symbols-outlined.icon-fill {
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+.ambient-shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.ambient-shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.ambient-shadow-lg {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}

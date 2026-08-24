@@ -1,11 +1,5 @@
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './CompanionDialogueModal.css'
-
-const SPEAKER_LABELS = {
-  companion: null, // filled in by caller with the actual companion name
-  npc: 'Citizen',
-  mayor: 'Mayor',
-  narrator: 'Story',
-}
 
 const SPEAKER_ICONS = {
   companion: '\ud83e\udd16',
@@ -30,11 +24,18 @@ const SPEAKER_ICONS = {
  * shouldn't normally happen in practice but is handled defensively.
  */
 export default function CompanionDialogueModal({ narrative, narrator, companionName, playerName }) {
+  const { t } = useLanguage()
+  const SPEAKER_LABELS = {
+    companion: null, // filled in by caller with the actual companion name
+    npc: t('dialogueModal.citizen'),
+    mayor: t('dialogueModal.mayor'),
+    narrator: t('dialogueModal.story'),
+  }
   const usingNarrator = !narrative.isActive && narrator?.isActive
   if (!narrative.isActive && !usingNarrator) return null
 
   const speaker = usingNarrator ? 'narrator' : narrative.speaker
-  const speakerLabel = speaker === 'companion' ? (companionName || 'Companion') : SPEAKER_LABELS[speaker]
+  const speakerLabel = speaker === 'companion' ? (companionName || t('dialogueModal.companionFallback')) : SPEAKER_LABELS[speaker]
   const currentLine = usingNarrator ? narrator.currentLine : narrative.currentLine
   const options = usingNarrator ? null : narrative.options
   const hasMoreLines = usingNarrator ? narrator.hasMoreLines : narrative.hasMoreLines
@@ -62,14 +63,14 @@ export default function CompanionDialogueModal({ narrative, narrator, companionN
           </div>
         ) : (
           <button className="cdm-continue-btn" onClick={advance}>
-            {hasMoreLines ? 'Next' : 'Okay'}
+            {hasMoreLines ? t('dialogueModal.next') : t('dialogueModal.okay')}
           </button>
         )}
       </div>
 
       <div className="cdm-portrait-col cdm-portrait-col--player">
         <div className="cdm-portrait cdm-portrait--player">{'\ud83e\uddd1\u200d\ud83d\udcbc'}</div>
-        <span className="cdm-name-tag cdm-name-tag--player">{playerName || 'You'}</span>
+        <span className="cdm-name-tag cdm-name-tag--player">{playerName || t('dialogueModal.you')}</span>
       </div>
     </div>
   )

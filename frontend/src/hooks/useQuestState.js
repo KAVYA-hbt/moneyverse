@@ -2,10 +2,10 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { getUserProfile } from '../utils/gameStorage'
 import { completeQuestOnServer } from '../services/backendSync.js'
 import {
-  QUEST_LABELS,
   QUEST_REWARDS,
   SCENARIO_CHAINS,
   getLevelInfo,
+  getQuestLabels,
 } from '../data/questCatalog'
 
 const DEFAULT_REWARD = 20
@@ -134,7 +134,7 @@ function pickDynamicQuestBuildings(layout, scenario, userName) {
   return { chain, questBuildings }
 }
 
-export function useQuestState(layout, onboardingProfile) {
+export function useQuestState(layout, onboardingProfile, language = 'en') {
   const [scenarioOverride, setScenarioOverride] = useState(null)
   const scenario = scenarioOverride || determineScenario(onboardingProfile)
 
@@ -195,7 +195,7 @@ export function useQuestState(layout, onboardingProfile) {
 
   const isComplete = useCallback((questId) => completed.has(questId), [completed])
 
-  const levelInfo = useMemo(() => getLevelInfo(completed.size), [completed])
+  const levelInfo = useMemo(() => getLevelInfo(completed.size, language), [completed, language])
 
   // Only reveal quests up to and including the player's current level block
   // (5 per level), so future levels' buildings/markers don't spoil early or
@@ -212,10 +212,14 @@ export function useQuestState(layout, onboardingProfile) {
     return !prereqs.every((p) => completed.has(p))
   }, [chain, completed])
 
-  const completeQuest = useCallback((questId) => {
+  // rewardMultiplier lets a caller grant a reduced payout for the same
+  // quest slot (e.g. skipping a mini-game early banks partial progress at
+  // half the normal reward) without touching the underlying QUEST_REWARDS
+  // table, which everything else still reads at full value.
+  const completeQuest = useCallback((questId, rewardMultiplier = 1) => {
     if (completed.has(questId)) return
     setCompleted((prev) => new Set(prev).add(questId))
-    const reward = QUEST_REWARDS[questId] || DEFAULT_REWARD
+    const reward = Math.round((QUEST_REWARDS[questId] || DEFAULT_REWARD) * rewardMultiplier)
     setCoins((prev) => prev + reward)
     setLastReward({ questId, amount: reward })
 
@@ -269,7 +273,7 @@ export function useQuestState(layout, onboardingProfile) {
     chain,
     visibleChain,
     questBuildings,
-    questLabels: QUEST_LABELS,
+    questLabels: getQuestLabels(language),
     isComplete,
     isLocked,
     completeQuest,

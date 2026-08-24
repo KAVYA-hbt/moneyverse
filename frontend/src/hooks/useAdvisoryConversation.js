@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { ADVISORY_SCRIPTS } from '../data/advisoryScripts.js'
+import { getAdvisoryScript } from '../data/advisoryScripts.js'
 
 let bubbleIdCounter = 0
 function nextId() {
@@ -35,12 +35,15 @@ const DEFAULT_REACTION_OPTIONS = [
  *      of costing the player a turn of its own.
  *
  * State machine:
- *   greeting -> options -> confirm -> resolving (each resolution line is
+ *   greeting -> options -> confirm -> time_skip (purchase acknowledged;
+ *   the conversation stops here until the player taps continueAfterPurchase
+ *   -- never an automatic timer -- instead of the consequence landing in
+ *   the same breath as the decision) -> resolving (each resolution line is
  *   followed by a real 2-option reaction, never a bare Continue) ->
  *   mid_resolution (takeaway card fades in here, non-blocking) ->
  *   goodbye -> done
  */
-export function useAdvisoryConversation() {
+export function useAdvisoryConversation(language = 'en', t = (key) => key) {
   const [messages, setMessages] = useState([]) // { id, speaker: 'npc'|'player', text }
   const [phase, setPhase] = useState('idle') // 'idle' | 'greeting' | 'confirm' | 'resolving' | 'mid_resolution' | 'goodbye' | 'done'
   const [pendingChoice, setPendingChoice] = useState(null) // the option VALUE currently being confirmed
@@ -76,7 +79,7 @@ export function useAdvisoryConversation() {
   }, [])
 
   const start = useCallback((npcId) => {
-    const script = ADVISORY_SCRIPTS[npcId]
+    const script = getAdvisoryScript(npcId, language)
     if (!script) {
       console.warn(`[useAdvisoryConversation] No script for npc id "${npcId}"`)
       return false
@@ -98,7 +101,7 @@ export function useAdvisoryConversation() {
     setPhase('greeting')
     resetState()
     return true
-  }, [resetState])
+  }, [resetState, language])
 
   const close = useCallback(() => {
     setPhase('idle')
@@ -124,10 +127,10 @@ export function useAdvisoryConversation() {
     } else {
       finalChoiceValueRef.current = value
       pushMessage('npc', script.spendDeclineLine)
-      pushMessage('player', `No problem! See you later, ${script.npcName}.`)
+      pushMessage('player', t('advisory.noProblemSeeYouLater', { name: script.npcName }))
       setPhase('done')
     }
-  }, [pushMessage])
+  }, [pushMessage, t])
 
   // Kicks off the resolution narrative right after "Yes, do it." Shows the
   // first resolution line immediately (it's the natural continuation of
@@ -160,6 +163,16 @@ export function useAdvisoryConversation() {
   // phase returns to 'greeting' (which is what makes currentOptions
   // re-render below), and the robot hint panel closes since it was
   // scoped to the choice being reconsidered.
+  //
+  // On "yes", the consequence used to land in the exact same breath as
+  // the decision (resolutionLine[0] pushed synchronously right after
+  // "Yes, do it."), which read as the NPC's whole life playing out in
+  // one instant. Now the NPC acknowledges the purchase and the
+  // conversation stops there (phase 'time_skip') until the PLAYER
+  // actually taps to continue (see continueAfterPurchase below) -- not a
+  // blind timer -- at which point the "...a few days later" marker and
+  // the actual consequence appear, so it reads as two separate visits
+  // the player themselves moved between, instead of one instant reveal.
   const confirmChoice = useCallback((confirmed) => {
     const script = scriptRef.current
     const value = pendingChoice
@@ -169,15 +182,30 @@ export function useAdvisoryConversation() {
 
     if (confirmed) {
       finalChoiceValueRef.current = value
-      pushMessage('player', 'Yes, do it.')
-      beginResolution(script, value)
+      pushMessage('player', t('advisory.yesDoItLine'))
+      const closingLine = script.purchaseConfirmedLine?.[value]
+      if (closingLine) pushMessage('npc', closingLine)
+      setPhase('time_skip')
     } else {
       reversedCountRef.current += 1
-      pushMessage('player', 'No, let me think again.')
+      pushMessage('player', t('advisory.noLetMeThinkLine'))
       setPendingChoice(null)
       setPhase('greeting')
     }
-  }, [pendingChoice, pushMessage, beginResolution])
+  }, [pendingChoice, pushMessage, t])
+
+  // Player's own tap advancing past the "time_skip" pause -- this is the
+  // one beat in the whole conversation that isn't a real choice (there's
+  // nothing to decide, just time passing), so it's a single continue tap
+  // rather than two option chips, but it's still the player's action that
+  // moves things forward, never an automatic timer.
+  const continueAfterPurchase = useCallback(() => {
+    const script = scriptRef.current
+    const value = finalChoiceValueRef.current
+    if (!script || !value) return
+    pushMessage('time_skip', t('advisory.afterAFewDays'))
+    beginResolution(script, value)
+  }, [pushMessage, beginResolution, t])
 
   // Shows the contextual robot line in the EXTERNAL hint panel -- never
   // pushed into the chat log. Available during 'confirm' (shows
@@ -309,6 +337,7 @@ export function useAdvisoryConversation() {
     close,
     selectOption,
     confirmChoice,
+    continueAfterPurchase,
     requestRobotHelp,
     dismissRobotHint,
     selectResolutionReaction,

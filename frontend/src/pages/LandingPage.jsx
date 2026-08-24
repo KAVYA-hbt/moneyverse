@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import cityView from '../assets/backgrounds/city_view.png'
+import { useLanguage } from '../i18n/LanguageContext.jsx'
 import './LandingPage.css'
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Track fullscreen state changes
@@ -81,11 +83,11 @@ export default function LandingPage() {
 
       <div className="landing__milestones" aria-hidden="true">
         {[
-          { n: 1, x: 9, y: 84, title: 'Newcomer', icon: '🆔' },
-          { n: 2, x: 26, y: 62, title: 'Explorer', icon: '🧭' },
-          { n: 3, x: 43, y: 42, title: 'Achiever', icon: '📈' },
-          { n: 4, x: 60, y: 24, title: 'Specialist', icon: '🛡️' },
-          { n: 5, x: 78, y: 9, title: 'Master', icon: '👑' },
+          { n: 1, x: 9, y: 84, title: t('landing.milestoneNewcomer'), icon: '🆔' },
+          { n: 2, x: 26, y: 62, title: t('landing.milestoneExplorer'), icon: '🧭' },
+          { n: 3, x: 43, y: 42, title: t('landing.milestoneAchiever'), icon: '📈' },
+          { n: 4, x: 60, y: 24, title: t('landing.milestoneSpecialist'), icon: '🛡️' },
+          { n: 5, x: 78, y: 9, title: t('landing.milestoneMaster'), icon: '👑' },
         ].map((m) => (
           <div
             key={m.n}
@@ -118,13 +120,13 @@ export default function LandingPage() {
               </defs>
             </svg>
           </span>
-          <span className="landing__logo-text">MoneyVerse</span>
+          <span className="landing__logo-text">{t('landing.logo')}</span>
         </div>
 
         <button
           className="landing__fullscreen-btn"
           onClick={toggleFullscreen}
-          title={isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
+          title={isFullscreen ? t('onboarding.exitFullscreen') : t('onboarding.enterFullscreen')}
           aria-label="Toggle Fullscreen"
         >
           {isFullscreen ? (
@@ -140,15 +142,15 @@ export default function LandingPage() {
       </header>
 
       <main className="landing__main">
-        <p className="landing__eyebrow">Arrive Unknown, Leave a Legend.</p>
-        <h1 className="landing__title">Every choice here 
+        <p className="landing__eyebrow">{t('landing.eyebrow')}</p>
+        <h1 className="landing__title">{t('landing.titleLine')}
           <br />
-          <span className="landing__title-accent">becomes your reputation.</span>
+          <span className="landing__title-accent">{t('landing.titleAccent')}</span>
         </h1>
       </main>
 
       <button className="landing__cta landing__cta--centered" onClick={handleStartJourney}>
-        <span>Start Your Journey</span>
+        <span>{t('landing.startJourney')}</span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -157,9 +159,9 @@ export default function LandingPage() {
       <div className="landing__bottom-right">
         <div className="landing__story-card">
           <p className="landing__subtitle">
-            Real decisions. Real consequences. A city that's actually watching.
+            {t('landing.subtitle')}
           </p>
-          
+
         </div>
       </div>
     </div>

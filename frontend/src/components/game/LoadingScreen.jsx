@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext.jsx';
 import './LoadingScreen.css';
 
 export default function LoadingScreen({ isReady = false, onEnter, playIntroSting, startAmbience, stopAmbience }) {
+  const { t } = useLanguage();
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   // Plays a smooth fade/zoom-out once the player actually taps the button
@@ -139,28 +141,15 @@ export default function LoadingScreen({ isReady = false, onEnter, playIntroSting
             LoadingScreen.css (animation is `1 forwards`, not `infinite`) */}
         <div className="crawl-text">
           <div className="intro-title">
-            <h1>MONEYVERSE LEGACY</h1>
+            <h1>{t('loading.title')}</h1>
           </div>
 
-          <p>
-            Welcome to a metropolis on the brink. A city where dreams are stalled by debt, and futures are clouded by financial chaos.
-          </p>
-          <p>
-            You have arrived as an outsider, armed only with a companion by your side—a guide you will name, and a friend who will help you navigate the challenges.
-          </p>
-          <p>
-            The citizens here are waiting. They face real-world dilemmas, from surprise windfalls to crushing credit limits. They need a strategist. They need you.
-          </p>
-          <p>
-            By solving their problems, you do not just earn coins—you earn their absolute trust. With every wise choice, new districts rise, new paths unlock, and the skyline transforms.
-          </p>
-          <p>
-            Earn your badges. Share your victories. Prove your mastery. 
-          </p>
-          
-          <p>
-            The city is waiting. Your financial empire begins now...
-          </p>
+          <p>{t('loading.p1')}</p>
+          <p>{t('loading.p2')}</p>
+          <p>{t('loading.p3')}</p>
+          <p>{t('loading.p4')}</p>
+          <p>{t('loading.p5')}</p>
+          <p>{t('loading.p6')}</p>
         </div>
       </div>
 
@@ -193,7 +182,7 @@ export default function LoadingScreen({ isReady = false, onEnter, playIntroSting
         disabled={!isReady}
         aria-disabled={!isReady}
       >
-        {isReady ? <>Start Your Journey &rarr;</> : <>Preparing your city&hellip;</>}
+        {isReady ? t('loading.startJourney') : t('loading.preparing')}
       </button>
     </div>
   );

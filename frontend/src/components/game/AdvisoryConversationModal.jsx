@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './AdvisoryConversationModal.css'
 
 const SPEAKER_META = {
@@ -7,6 +8,7 @@ const SPEAKER_META = {
 }
 
 export default function AdvisoryConversationModal({ conversation, npcPortrait, playerPortrait }) {
+  const { t } = useLanguage()
   const scrollRef = useRef(null)
 
   useEffect(() => {
@@ -28,15 +30,15 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
             <button
               className="acm-robot-help-btn"
               onClick={conversation.requestRobotHelp}
-              aria-label="Need help?"
-              title="Need help?"
+              aria-label={t('advisory.needHelp')}
+              title={t('advisory.needHelp')}
             >
-              🤖 <span>Need help?</span>
+              🤖 <span>{t('advisory.needHelp')}</span>
             </button>
 
             {conversation.robotHintVisible && (
               <div className="acm-robot-hint-popup">
-                <button className="acm-robot-hint-close" onClick={conversation.dismissRobotHint} aria-label="Close hint">
+                <button className="acm-robot-hint-close" onClick={conversation.dismissRobotHint} aria-label={t('badge.close')}>
                   ✕
                 </button>
                 <p>{conversation.robotHintText}</p>
@@ -62,6 +64,18 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
 
         <div className="acm-messages" ref={scrollRef}>
           {conversation.messages.map((msg) => {
+            // A "time_skip" entry (the "...a few days later" marker -- see
+            // useAdvisoryConversation.js's confirmChoice) is a narrator
+            // beat, not something either party said -- rendered as its
+            // own centered divider instead of a chat bubble with an avatar.
+            if (msg.speaker === 'time_skip') {
+              return (
+                <div key={msg.id} className="acm-time-skip">
+                  <span>{msg.text}</span>
+                </div>
+              )
+            }
+
             const meta = SPEAKER_META[msg.speaker] || SPEAKER_META.npc
             const isPlayer = msg.speaker === 'player'
 
@@ -101,10 +115,10 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
           {conversation.showConfirmCards && (
             <div className="acm-cards-row">
               <button className="acm-card acm-card--yes" onClick={() => conversation.confirmChoice(true)}>
-                ✅ Yes, do it
+                {t('advisory.confirmYes')}
               </button>
               <button className="acm-card acm-card--no" onClick={() => conversation.confirmChoice(false)}>
-                🤔 No, let me think
+                {t('advisory.confirmNo')}
               </button>
             </div>
           )}
@@ -154,9 +168,19 @@ export default function AdvisoryConversationModal({ conversation, npcPortrait, p
             </div>
           )}
 
+          {/* The one beat in this whole conversation with nothing to
+              actually decide -- just time passing -- so it's a single
+              continue tap rather than two option chips. Still the
+              player's own action moving things forward, never a timer. */}
+          {conversation.phase === 'time_skip' && (
+            <button className="acm-continue-btn" onClick={conversation.continueAfterPurchase}>
+              {t('advisory.tapToContinue')}
+            </button>
+          )}
+
           {conversation.phase === 'done' && (
             <button className="acm-continue-btn acm-continue-btn--close" onClick={conversation.close}>
-              Okay
+              {t('advisory.okay')}
             </button>
           )}
         </div>

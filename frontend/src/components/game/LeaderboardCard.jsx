@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getApiBaseUrl } from '../../utils/apiBase.js'
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 
 const LEADERBOARD_STORAGE_KEY = 'city_game_leaderboard_history'
 
@@ -40,6 +41,7 @@ function saveStoredHistory(history) {
 }
 
 export default function LeaderboardCard({ playerProfile, userScore }) {
+  const { t } = useLanguage()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [history, setHistory] = useState([])
   const [showFullHistory, setShowFullHistory] = useState(false)
@@ -117,12 +119,12 @@ export default function LeaderboardCard({ playerProfile, userScore }) {
   return (
     <div className="leaderboard-card">
       <div className="leaderboard-header">
-        <h3>🏆 Live Leaderboard</h3>
+        <h3>{t('leaderboard.liveLeaderboard')}</h3>
         <button
           className="collapse-btn"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          {isCollapsed ? 'Show' : 'Hide'}
+          {isCollapsed ? t('leaderboard.show') : t('leaderboard.hide')}
         </button>
       </div>
 
@@ -143,9 +145,9 @@ export default function LeaderboardCard({ playerProfile, userScore }) {
                 >
                   <span className={`rank rank-${rank}`}>#{rank}</span>
                   <span className="player-name">
-                    {player.name} {isUser ? '(You)' : ''}
+                    {player.name} {isUser ? t('leaderboard.you') : ''}
                   </span>
-                  <span className="player-score">{player.score} pts</span>
+                  <span className="player-score">{player.score} {t('leaderboard.pts')}</span>
                 </div>
               );
             })}
@@ -165,7 +167,7 @@ export default function LeaderboardCard({ playerProfile, userScore }) {
               }}
               onClick={() => setShowFullHistory(!showFullHistory)}
             >
-              {showFullHistory ? 'Show Top 5' : `View All History (${sortedLeaderboard.length})`}
+              {showFullHistory ? t('leaderboard.showTop5') : t('leaderboard.viewAllHistory', { count: sortedLeaderboard.length })}
             </button>
           )}
         </>

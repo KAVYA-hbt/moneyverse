@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { DIALOGUE_BEATS } from '../data/companionDialogue.js'
+import { getDialogueBeat } from '../data/companionDialogue.js'
 
 // A single line in a beat's `lines` array can itself be a function (not
 // just the whole `lines` value) -- see companionDialogue.js's documented
@@ -33,7 +33,7 @@ const resolveLine = (line, ctx) => (typeof line === 'function' ? line(ctx) : lin
  *
  * The active line/animation/options are read by CompanionDialogueModal.
  */
-export function useCompanionNarrative() {
+export function useCompanionNarrative(language = 'en') {
   const [activeBeat, setActiveBeat] = useState(null) // resolved beat object, or null
   const [context, setContext] = useState({})
   const [lineIndex, setLineIndex] = useState(0)
@@ -48,7 +48,7 @@ export function useCompanionNarrative() {
   const playCalledDuringCallbackRef = useRef(false)
 
   const play = useCallback((beatOrId, ctx = {}, choiceCallback = null) => {
-    const resolvedBeat = typeof beatOrId === 'string' ? DIALOGUE_BEATS[beatOrId] : beatOrId
+    const resolvedBeat = typeof beatOrId === 'string' ? getDialogueBeat(beatOrId, language) : beatOrId
     if (!resolvedBeat) {
       console.warn(`[useCompanionNarrative] Unknown beat: "${beatOrId}"`)
       return
@@ -73,7 +73,7 @@ export function useCompanionNarrative() {
     setContext(ctx)
     setLineIndex(0)
     setOnChoice(() => choiceCallback)
-  }, [])
+  }, [language])
 
   const close = useCallback(() => {
     setActiveBeat(null)

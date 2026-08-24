@@ -1,9 +1,11 @@
 import { useRef, useState, useCallback } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext.jsx'
 import './MobileControls.css'
 
 const JOYSTICK_MAX_RADIUS = 45
 
 export function MobileControls({ onInteract, showInteract, interactLabel }) {
+  const { t } = useLanguage()
   const baseRef = useRef(null)
   const [knobPos, setKnobPos] = useState({ x: 0, y: 0 })
   const joystickDraggingRef = useRef(false)
@@ -186,7 +188,7 @@ export function MobileControls({ onInteract, showInteract, interactLabel }) {
             }}
           >
             <span className="mc-interact-icon">✋</span>
-            <span className="mc-interact-label">{interactLabel || 'Interact'}</span>
+            <span className="mc-interact-label">{interactLabel || t('mobileControls.interact')}</span>
           </button>
         )}
         <button

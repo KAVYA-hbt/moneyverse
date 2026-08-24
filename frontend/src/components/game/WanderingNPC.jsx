@@ -5,7 +5,14 @@ import Avatar from '../Avatar.jsx'
 const NPC_WALK_SPEED = 1.4
 const ARRIVE_THRESHOLD = 0.4
 const IDLE_PAUSE_SECONDS = [1.5, 4]
-const NEARBY_TARGET_RADIUS = 25
+// Every road tile in a generated city sits within ~9 units of some
+// building (checked against real generated layouts), so a wander hop
+// much longer than that routinely cuts across open blocks with no
+// building in view partway through -- reading as "wandered outside the
+// city" even though both ends of the hop are legitimate road tiles.
+// Keeping hops shorter than that margin means an NPC is never more than
+// a short walk from a visible building at any point along its path.
+const NEARBY_TARGET_RADIUS = 12
 const NPC_RADIUS = 0.4
 
 // Shared registry for NPC-to-NPC collision detection across instances
@@ -13,15 +20,30 @@ const activeNpcMap = new Map()
 
 function pickNearbyTarget(roads, fromX, fromZ) {
   if (!roads || roads.length === 0) return [fromX, fromZ]
-  const nearby = roads.filter((r) => {
+
+  const withDist = roads.map((r) => {
     const rx = r.render_x ?? r.x ?? 0
     const rz = r.render_z ?? r.z ?? 0
-    const d = Math.hypot(rx - fromX, rz - fromZ)
-    return d > 2 && d < NEARBY_TARGET_RADIUS
+    return { r, rx, rz, d: Math.hypot(rx - fromX, rz - fromZ) }
   })
-  const pool = nearby.length > 0 ? nearby : roads
-  const pick = pool[Math.floor(Math.random() * pool.length)]
-  return [pick.render_x ?? pick.x ?? 0, pick.render_z ?? pick.z ?? 0]
+
+  // Widen the search in steps rather than falling straight back to
+  // "anywhere in the whole city" the moment nothing's within the normal
+  // radius -- that single-step fallback was the other way a hop could
+  // end up crossing a large open block: the nearest actual road tile is
+  // still local, just a bit past NEARBY_TARGET_RADIUS, and reaching for
+  // it is a much shorter walk than reaching for a uniformly random tile
+  // anywhere on the map.
+  for (const maxDist of [NEARBY_TARGET_RADIUS, NEARBY_TARGET_RADIUS * 2, NEARBY_TARGET_RADIUS * 4, Infinity]) {
+    const nearby = withDist.filter((e) => e.d > 2 && e.d < maxDist)
+    if (nearby.length > 0) {
+      const pick = nearby[Math.floor(Math.random() * nearby.length)]
+      return [pick.rx, pick.rz]
+    }
+  }
+
+  const pick = withDist[Math.floor(Math.random() * withDist.length)]
+  return [pick.rx, pick.rz]
 }
 
 function collidesWithBoxes(x, z, items, radius) {
@@ -29,29 +51,26 @@ function collidesWithBoxes(x, z, items, radius) {
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
 
-    // render_x/render_z is a CORNER, not a center — the same bug already
-    // fixed for the capstone map icon and the fixed-story-NPC spawn
-    // placement (see GamePage.jsx). This collision check was still using
-    // it as a center, which shifts every building's hitbox by half its
-    // own width/depth — that offset is exactly why wandering NPCs were
-    // seen walking into/through walls despite this collision code
-    // existing: half the building was correctly guarded, the other half
-    // wasn't guarded at all. Vehicle/parking items use position_x/x,
-    // which IS already center-based, so only the render_x/render_z path
-    // needs the corner-to-center correction.
-    const usesCornerCoords = item.render_x !== undefined || item.render_z !== undefined
-    const rawX = item.render_x ?? item.position_x ?? item.x ?? 0
-    const rawZ = item.render_z ?? item.position_z ?? item.z ?? 0
-    const width = item.scaled_width || item.width || 3
-    const depth = item.scaled_depth || item.depth || 3
-    const bx = usesCornerCoords ? rawX + width / 2 : rawX
-    const bz = usesCornerCoords ? rawZ + depth / 2 : rawZ
+    // render_x/render_z is a per-MODEL render offset (wherever that
+    // specific FBX/GLB's own origin needs to land so it draws in the
+    // right place — see measure_assets.py) and its relationship to the
+    // asset's actual footprint varies by model and rotation. It is NOT a
+    // reliable box corner, which is exactly why NPCs kept clipping into
+    // buildings despite an earlier attempt to "fix" this by treating it
+    // as one. position_x/position_z is the backend's real placement
+    // corner (pack_layout.py / generate_layout.py) and is what
+    // PlayerController.jsx's own (working, proven) building collision
+    // already keys off — matched here instead of reinventing a second,
+    // different formula for NPCs.
+    const bx = item.position_x ?? item.x ?? 0
+    const bz = item.position_z ?? item.z ?? 0
+    const width = item.scaled_width || item.width || 10
+    const depth = item.scaled_depth || item.depth || 10
 
-    // Use centered bounding box or offset based on layout format
-    const minX = bx - width / 2 - radius
-    const maxX = bx + width / 2 + radius
-    const minZ = bz - depth / 2 - radius
-    const maxZ = bz + depth / 2 + radius
+    const minX = bx - radius
+    const maxX = bx + width + radius
+    const minZ = bz - radius
+    const maxZ = bz + depth + radius
 
     if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) return true
   }

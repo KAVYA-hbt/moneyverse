@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useLanguage } from '../i18n/LanguageContext.jsx'
 import './ConsentModal.css'
 
 export default function ConsentModal({ onCancel, onAgree }) {
+  const { t } = useLanguage()
   const [readAgreement, setReadAgreement] = useState(false)
   const [consent, setConsent] = useState(false)
 
@@ -11,8 +13,8 @@ export default function ConsentModal({ onCancel, onAgree }) {
     <div className="consent">
       <div className="consent__backdrop" onClick={onCancel} />
       <div className="consent__modal">
-        <p className="consent__eyebrow">Step 2 of 2</p>
-        <h2 className="consent__title">Consent &amp; Data Usage Agreement</h2>
+        <p className="consent__eyebrow">{t('consent.step')}</p>
+        <h2 className="consent__title">{t('consent.title')}</h2>
 
         <a
           className="consent__doc"
@@ -22,8 +24,8 @@ export default function ConsentModal({ onCancel, onAgree }) {
         >
           <div className="consent__doc-icon">📄</div>
           <div>
-            <p className="consent__doc-name">Moneyverse Data Usage Agreement</p>
-            <p className="consent__doc-meta">PDF · 1 page · opens in a new tab</p>
+            <p className="consent__doc-name">{t('consent.docName')}</p>
+            <p className="consent__doc-meta">{t('consent.docMeta')}</p>
           </div>
         </a>
 
@@ -33,7 +35,7 @@ export default function ConsentModal({ onCancel, onAgree }) {
             checked={readAgreement}
             onChange={(e) => setReadAgreement(e.target.checked)}
           />
-          <span>I have read the Moneyverse Data Usage Agreement</span>
+          <span>{t('consent.check1')}</span>
         </label>
 
         <label className="consent__check">
@@ -42,15 +44,15 @@ export default function ConsentModal({ onCancel, onAgree }) {
             checked={consent}
             onChange={(e) => setConsent(e.target.checked)}
           />
-          <span>I consent to using my details for this demo experience</span>
+          <span>{t('consent.check2')}</span>
         </label>
 
         <div className="consent__actions">
           <button className="consent__cancel" onClick={onCancel}>
-            Cancel
+            {t('consent.cancel')}
           </button>
           <button className="consent__agree" disabled={!canAgree} onClick={onAgree}>
-            Agree &amp; Start Game
+            {t('consent.agree')}
           </button>
         </div>
       </div>

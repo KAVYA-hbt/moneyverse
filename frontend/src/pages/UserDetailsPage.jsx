@@ -10,7 +10,14 @@ import previewTwo from '../assets/backgrounds/checkpoint.png';
 import ConsentModal from './ConsentModal';
 import { saveUserProfile, getUserProfile } from '../utils/gameStorage';
 import { cdnUrl } from '../config/assetCdn.js';
+import { useLanguage } from '../i18n/LanguageContext.jsx';
 import './UserDetailsPage.css';
+
+const LANGUAGE_OPTIONS = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'हिंदी' },
+  { code: 'ta', label: 'தமிழ்' },
+];
 
 export const AVATARS = [
   {
@@ -50,15 +57,9 @@ export const AVATARS = [
   },
 ];
 
-const SCENARIOS = {
-  student: {
-    label: 'College Student',
-    icon: '🎓',
-  },
-  employee: {
-    label: 'New Employee',
-    icon: '💼',
-  },
+const SCENARIO_ICONS = {
+  student: '🎓',
+  employee: '💼',
 };
 
 function findClipByName(animations, targetName) {
@@ -72,10 +73,11 @@ function findClipByName(animations, targetName) {
 }
 
 function CanvasLoader() {
+  const { t } = useLanguage();
   return (
     <Html center>
       <div style={{ color: '#1e8bff', fontWeight: 600, fontSize: '11px', fontFamily: 'Sora, sans-serif', whiteSpace: 'nowrap' }}>
-        Loading...
+        {t('onboarding.loading')}
       </div>
     </Html>
   );
@@ -169,6 +171,7 @@ function AvatarPreview({ modelUrl, isLocked }) {
 
 export default function UserDetailsPage() {
   const navigate = useNavigate();
+  const { t, language, setLanguage } = useLanguage();
   const existingProfile = getUserProfile();
 
   const [form, setForm] = useState({
@@ -268,14 +271,27 @@ export default function UserDetailsPage() {
           {/* HEADER ROW WITH FULLSCREEN BUTTON */}
           <div className="details__header-row">
             <div className="details__header-group">
-              <h1 className="details__title">💫 Choose Your Persona ✨</h1>
+              <h1 className="details__title">{t('onboarding.header')}</h1>
             </div>
-            
+
+            <div className="details__language-picker" role="group" aria-label={t('onboarding.languageLabel')}>
+              {LANGUAGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.code}
+                  type="button"
+                  className={`details__language-btn${language === opt.code ? ' details__language-btn--active' : ''}`}
+                  onClick={() => setLanguage(opt.code)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <button
               type="button"
               className="details__fullscreen-btn"
               onClick={toggleFullscreen}
-              title={isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
+              title={isFullscreen ? t('onboarding.exitFullscreen') : t('onboarding.enterFullscreen')}
               aria-label="Toggle Fullscreen"
             >
               {isFullscreen ? (
@@ -311,7 +327,7 @@ export default function UserDetailsPage() {
                 className="avatar-arrow avatar-arrow--prev"
                 disabled={isLocked}
                 onClick={handlePrevAvatar}
-                aria-label="Previous Avatar"
+                aria-label={t('onboarding.prevAvatar')}
               >
                 &#10094;
               </button>
@@ -323,7 +339,7 @@ export default function UserDetailsPage() {
                 className="avatar-arrow avatar-arrow--next"
                 disabled={isLocked}
                 onClick={handleNextAvatar}
-                aria-label="Next Avatar"
+                aria-label={t('onboarding.nextAvatar')}
               >
                 &#10095;
               </button>
@@ -334,25 +350,25 @@ export default function UserDetailsPage() {
               className={`avatar-lock-btn ${isLocked ? 'avatar-lock-btn--locked' : ''}`}
               onClick={() => setIsLocked(!isLocked)}
             >
-              {isLocked ? '🔒 Avatar Locked' : '🔓 Lock Selected Avatar'}
+              {isLocked ? t('onboarding.avatarLocked') : t('onboarding.lockAvatar')}
             </button>
           </div>
 
           {/* FORM FIELDS */}
           <div className="details__form">
-            <Field label="Avatar Name">
+            <Field label={t('onboarding.avatarNameLabel')}>
               <input
                 type="text"
-                placeholder="e.g. Ananya Sharma"
+                placeholder={t('onboarding.avatarNamePlaceholder')}
                 value={form.name}
                 onChange={handleField('name')}
               />
             </Field>
 
-            <Field label="Email Address">
+            <Field label={t('onboarding.emailLabel')}>
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('onboarding.emailPlaceholder')}
                 value={form.email}
                 onChange={handleField('email')}
               />
@@ -361,14 +377,17 @@ export default function UserDetailsPage() {
 
           {/* SCENARIOS */}
           <div className="details__scenario">
-            <h3>Choose your scenario</h3>
+            <h3>{t('onboarding.chooseScenario')}</h3>
             <div className="details__scenario-grid">
-              {Object.entries(SCENARIOS).map(([key, s]) => (
+              {[
+                { key: 'student', label: t('onboarding.scenarioStudent'), icon: SCENARIO_ICONS.student },
+                { key: 'employee', label: t('onboarding.scenarioEmployee'), icon: SCENARIO_ICONS.employee },
+              ].map((s) => (
                 <ScenarioCard
-                  key={key}
+                  key={s.key}
                   scenario={s}
-                  selected={scenario === key}
-                  onSelect={() => setScenario(key)}
+                  selected={scenario === s.key}
+                  onSelect={() => setScenario(s.key)}
                 />
               ))}
             </div>
@@ -381,7 +400,7 @@ export default function UserDetailsPage() {
             disabled={!canContinue}
             onClick={() => setShowConsent(true)}
           >
-            {isLocked ? 'Continue' : 'Lock Avatar First'}
+            {isLocked ? t('onboarding.continue') : t('onboarding.lockFirst')}
           </button>
         </div>
 
@@ -406,6 +425,7 @@ export default function UserDetailsPage() {
               scenario,
               selectedAvatar: currentAvatar,
               coins: 120,
+              language,
             };
             saveUserProfile(profileData);
             navigate('/game', {

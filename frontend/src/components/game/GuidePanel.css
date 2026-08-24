@@ -5,6 +5,13 @@
   overflow: hidden;
   width: 280px;
   box-shadow: 0 0 24px rgba(88, 28, 235, 0.25), 0 12px 28px rgba(0, 0, 0, 0.5);
+  animation: gp-pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+
+@keyframes gp-pop-in {
+  from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .gp-header {

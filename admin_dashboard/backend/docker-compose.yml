@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: finguru_admin_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: finguru
+      POSTGRES_PASSWORD: finguru
+      POSTGRES_DB: finguru_admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - finguru_admin_pgdata:/var/lib/postgresql/data
+
+volumes:
+  finguru_admin_pgdata:

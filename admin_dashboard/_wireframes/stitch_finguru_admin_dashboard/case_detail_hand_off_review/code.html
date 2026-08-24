@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Case Detail - FinGuru Analyst</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#140900",
+                    "on-primary-fixed": "#181445",
+                    "secondary-fixed-dim": "#4fdbc8",
+                    "surface-dim": "#d8dadc",
+                    "surface-container-highest": "#e0e3e5",
+                    "secondary-container": "#6df5e1",
+                    "inverse-primary": "#c4c1fb",
+                    "on-surface-variant": "#47464f",
+                    "surface-container-high": "#e6e8ea",
+                    "surface-variant": "#e0e3e5",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#71f8e4",
+                    "on-error-container": "#93000a",
+                    "surface": "#f7f9fb",
+                    "inverse-on-surface": "#eff1f3",
+                    "background": "#f7f9fb",
+                    "surface-tint": "#5b598c",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "error-container": "#ffdad6",
+                    "on-secondary": "#ffffff",
+                    "primary": "#070235",
+                    "tertiary-fixed": "#ffddb8",
+                    "on-primary": "#ffffff",
+                    "outline-variant": "#c8c5d0",
+                    "primary-fixed-dim": "#c4c1fb",
+                    "on-primary-fixed-variant": "#444173",
+                    "primary-fixed": "#e3dfff",
+                    "on-tertiary-container": "#c07a00",
+                    "secondary": "#006b5f",
+                    "primary-container": "#1e1b4b",
+                    "outline": "#787680",
+                    "on-secondary-fixed": "#00201c",
+                    "on-secondary-fixed-variant": "#005048",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#f7f9fb",
+                    "on-surface": "#191c1e",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "tertiary-container": "#331d00",
+                    "inverse-surface": "#2d3133",
+                    "surface-container": "#eceef0",
+                    "on-secondary-container": "#006f64",
+                    "on-background": "#191c1e",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#2a1700",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-container": "#8683ba",
+                    "surface-container-low": "#f2f4f6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "lg": "24px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "xl": "32px",
+                    "gutter": "24px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "title-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "title-lg": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "title-md": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                    "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: theme('colors.surface-variant');
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar (Shared Component Executed) -->
+<header class="bg-surface-container-lowest border-b border-surface-variant shadow-sm flex justify-between items-center w-full px-lg py-sm shrink-0 z-50 relative">
+<div class="flex items-center gap-md">
+<!-- Brand Logo -->
+<div class="font-headline-md text-headline-md font-bold text-primary">
+                FinGuru Analyst
+            </div>
+<div class="h-6 w-px bg-surface-variant mx-2"></div>
+<!-- Contextual Breadcrumb (Task-focused page) -->
+<div class="flex items-center text-on-surface-variant gap-2 text-sm font-medium">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                    Active Queue
+                </a>
+<span>/</span>
+<span class="text-on-surface">Case #8492-AX</span>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<!-- Search Bar: on_right -->
+<div class="relative hidden md:block w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full pl-9 pr-4 py-1.5 bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder-on-surface-variant transition-all" placeholder="Search cases..." type="text"/>
+</div>
+<!-- Trailing Icons -->
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+<!-- Profile Image -->
+<div class="ml-2">
+<img alt="Analyst Profile" class="w-8 h-8 rounded-full object-cover border border-surface-variant" data-alt="A professional headshot of a corporate financial analyst in a modern office setting, soft natural lighting, high resolution, minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpP4IEwRccPibNcBSIwOXO6qQic6bW-HJOWjaqOs1UC3omcxGLzxGGYF65u0CrlZi7RAyHYqnc6l44oEX-fnqKVfta30uh_Re8uUciO4F6jnubAFU6o2_98TIwpMCsUAJfcO1ur2SnDDKV3yHUbzkbTbEujKhboh_iOI0lMZ-dhzjAm_NlhpaHvIfkGRrhrD3z4KF3KJtUHOuiv6DUbIw0ftx73hTNbJ2u3XsZu2xUF_AXvrduNbN2"/>
+</div>
+</div>
+</header>
+<!-- Main Workspace Area -->
+<main class="flex-1 w-full max-w-container-max mx-auto p-gutter flex gap-gutter h-[calc(100vh-64px)]">
+<!-- LEFT PANEL (60%): Chat Transcript -->
+<section class="w-[60%] flex flex-col bg-surface-container-lowest rounded-xl border border-surface-variant shadow-sm overflow-hidden flex-shrink-0">
+<!-- Panel Header -->
+<div class="px-md py-sm border-b border-surface-variant bg-surface-container-lowest flex justify-between items-center z-10 shrink-0">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-[18px]">forum</span>
+</div>
+<div>
+<h2 class="font-title-md text-title-md text-on-surface">Conversation Transcript</h2>
+<p class="text-[12px] text-on-surface-variant">Player ID: <span class="font-mono text-primary">#PL-44910</span> • Started 10:42 AM</p>
+</div>
+</div>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-surface-container text-on-surface-variant font-label-md text-label-md rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">history</span> 24h History
+                    </span>
+</div>
+</div>
+<!-- Chat Area (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-md custom-scrollbar flex flex-col gap-4 bg-background/50">
+<!-- Time divider -->
+<div class="flex justify-center my-2">
+<span class="text-[11px] font-medium text-on-surface-variant bg-surface-container px-3 py-1 rounded-full uppercase tracking-wider">Today</span>
+</div>
+<!-- Bot Message -->
+<div class="flex gap-sm max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline-variant">
+<span class="material-symbols-outlined text-[16px] text-on-surface">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-[11px] font-medium text-on-surface-variant ml-1">Virtual Assistant • 10:42 AM</span>
+<div class="bg-surface-container-low text-on-surface p-3 rounded-2xl rounded-tl-none text-[14px] leading-relaxed border border-surface-variant shadow-sm">
+                            Hello! I noticed you are reviewing your margin limits. How can I assist you with your portfolio today?
+                        </div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex gap-sm max-w-[85%] self-end flex-row-reverse">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+<span class="font-title-md text-title-md text-on-primary">J</span>
+</div>
+<div class="flex flex-col gap-1 items-end">
+<span class="text-[11px] font-medium text-on-surface-variant mr-1">Julian M. • 10:44 AM</span>
+<div class="bg-surface-container text-on-surface p-3 rounded-2xl rounded-tr-none text-[14px] leading-relaxed shadow-sm">
+                            I need to increase my leverage on the tech index. The system is blocking my trade.
+                        </div>
+</div>
+</div>
+<!-- Bot Message -->
+<div class="flex gap-sm max-w-[85%]">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline-variant">
+<span class="material-symbols-outlined text-[16px] text-on-surface">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-[11px] font-medium text-on-surface-variant ml-1">Virtual Assistant • 10:45 AM</span>
+<div class="bg-surface-container-low text-on-surface p-3 rounded-2xl rounded-tl-none text-[14px] leading-relaxed border border-surface-variant shadow-sm">
+                            I can help check that. Your current profile is set to a "Conservative" risk tier, which caps margin trades at 2x. Upgrading requires a portfolio review given current market volatility.
+                        </div>
+</div>
+</div>
+<!-- HIGHLIGHTED USER MESSAGE (Hand-off Trigger) -->
+<div class="flex gap-sm max-w-[85%] self-end flex-row-reverse mt-4 mb-2 relative">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+<span class="font-title-md text-title-md text-on-primary">J</span>
+</div>
+<div class="flex flex-col gap-1 items-end relative">
+<span class="text-[11px] font-medium text-error mr-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">warning</span> Julian M. • 10:47 AM
+                        </span>
+<div class="bg-error-container text-on-error-container p-4 rounded-2xl rounded-tr-none text-[14px] leading-relaxed shadow-md border-2 border-error relative z-10">
+                            Look, you don't understand. I HAVE to make this trade right now to cover the massive hit I took yesterday on the crypto drop. Just bypass the warning and double my limit immediately! If this doesn't go through I am completely ruined.
+                        </div>
+<!-- Bot's Reasoning Inline Note -->
+<div class="absolute -bottom-8 right-4 bg-surface-container-highest border border-outline-variant shadow-md rounded-lg p-2 flex gap-2 items-start max-w-[320px] z-20">
+<span class="material-symbols-outlined text-error text-[16px] mt-0.5">psychology</span>
+<div class="text-[11px] leading-tight text-on-surface">
+<span class="font-bold text-on-surface-variant block mb-0.5">Bot's Reasoning:</span>
+                                User expressed distress regarding potential over-leverage and requested human intervention. Escalation triggered.
+                            </div>
+</div>
+</div>
+</div>
+<!-- Bot Message (Handoff) -->
+<div class="flex gap-sm max-w-[85%] mt-10">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline-variant">
+<span class="material-symbols-outlined text-[16px] text-on-surface">smart_toy</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-[11px] font-medium text-on-surface-variant ml-1">Virtual Assistant • 10:47 AM</span>
+<div class="bg-surface-container-low text-on-surface p-3 rounded-2xl rounded-tl-none text-[14px] leading-relaxed border border-surface-variant shadow-sm">
+                            I understand this is a highly stressful situation. For your financial safety and to properly review this request, I am immediately transferring you to a senior analyst. Please hold, someone will be with you shortly.
+                        </div>
+</div>
+</div>
+<div class="flex justify-center mt-4">
+<span class="text-[11px] font-medium text-on-surface-variant flex items-center gap-1 bg-surface py-1 px-3 rounded-full border border-surface-variant">
+<span class="material-symbols-outlined text-[14px]">support_agent</span> Chat transferred to Admin Queue
+                    </span>
+</div>
+</div>
+</section>
+<!-- RIGHT PANEL (40%): Stacked Cards -->
+<section class="w-[40%] flex flex-col gap-md overflow-y-auto custom-scrollbar pr-1 pb-4">
+<!-- Card 1: Player Profile Summary -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-surface-variant shadow-sm flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+                        Player Profile Summary
+                    </h3>
+<button class="text-primary hover:bg-primary-fixed-dim/20 p-1 rounded transition-colors">
+<span class="material-symbols-outlined text-[20px]">open_in_new</span>
+</button>
+</div>
+<!-- Segment Tags -->
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="bg-surface-container text-on-surface-variant font-label-md text-label-md px-2 py-1 rounded border border-outline-variant">Saver</span>
+<span class="bg-surface-container text-on-surface-variant font-label-md text-label-md px-2 py-1 rounded border border-outline-variant">Risk-Averse (Historical)</span>
+</div>
+<!-- AI Summary -->
+<div class="bg-surface rounded-lg p-3 border border-surface-variant mt-1 text-[13px] leading-relaxed text-on-surface flex gap-3 items-start">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">auto_awesome</span>
+<p>Historically conservative trader focused on index funds. Recent behavior (last 48h) shows a sudden pivot to high-volatility assets and multiple denied margin increase requests following a significant portfolio drop.</p>
+</div>
+<!-- Visual Flags -->
+<div class="flex gap-2 mt-2">
+<div class="flex items-center gap-1.5 bg-error-container/50 text-on-error-container px-2.5 py-1.5 rounded-md border border-error/20 flex-1">
+<span class="material-symbols-outlined text-[16px]">priority_high</span>
+<span class="font-label-md text-label-md">Behavior Mismatch</span>
+</div>
+<div class="flex items-center gap-1.5 bg-error-container text-on-error-container px-2.5 py-1.5 rounded-md border border-error/30 flex-1">
+<span class="material-symbols-outlined text-[16px]">mood_bad</span>
+<span class="font-label-md text-label-md">Financial Distress</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Suggested Next Action -->
+<div class="bg-tertiary-fixed/30 p-md rounded-xl border border-tertiary-fixed-dim shadow-sm flex flex-col gap-2 relative overflow-hidden">
+<!-- Subtle background pattern or gradient can go here if needed, keeping it clean for now -->
+<div class="flex items-center gap-2 text-on-tertiary-container">
+<span class="material-symbols-outlined">lightbulb</span>
+<h3 class="font-title-md text-title-md font-bold">Suggested Next Action</h3>
+</div>
+<p class="text-[14px] text-on-surface leading-relaxed ml-7">
+                    Review player's recent over-leverage attempts and offer a personalized budgeting quest. Temporarily freeze margin increases until user acknowledges risk disclosures.
+                </p>
+<div class="ml-7 mt-2">
+<button class="bg-tertiary-container text-on-tertiary flex items-center gap-1 px-3 py-1.5 rounded font-label-md text-label-md hover:bg-tertiary transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">verified</span> Apply Restriction
+                    </button>
+</div>
+</div>
+<!-- Card 3: Case Actions -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-surface-variant shadow-sm flex flex-col gap-md">
+<div class="flex justify-between items-center">
+<h3 class="font-title-md text-title-md text-on-surface">Case Actions</h3>
+<span class="bg-primary-container text-on-primary-container font-label-md text-[10px] px-2 py-1 rounded-full border border-primary-fixed-dim flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">bolt</span> Escalation Source: Auto-triggered
+                    </span>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- Primary Action -->
+<button class="col-span-2 bg-primary text-on-primary font-label-md text-label-md py-2.5 rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-all shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">pan_tool</span> Claim Case &amp; Initiate Contact
+                    </button>
+<button class="bg-surface-container-low text-on-surface border border-outline-variant font-label-md text-label-md py-2 rounded-lg hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span> Resolve Fast
+                    </button>
+<button class="bg-surface-container-low text-on-surface border border-outline-variant font-label-md text-label-md py-2 rounded-lg hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">undo</span> Send Back to Bot
+                    </button>
+</div>
+<!-- Escalate Area -->
+<div class="mt-2 border-t border-surface-variant pt-3 flex flex-col gap-2">
+<label class="font-label-md text-[12px] text-on-surface-variant">Escalate to Tier 2 (Requires Reasoning)</label>
+<textarea class="w-full bg-surface text-on-surface border border-outline-variant rounded-md p-2 text-[13px] placeholder-outline focus:ring-1 focus:ring-primary focus:border-primary resize-none custom-scrollbar" placeholder="Detail the specific regulatory or risk factors requiring senior review..." rows="2"></textarea>
+<button class="self-end text-error border border-error/50 hover:bg-error-container px-3 py-1.5 rounded font-label-md text-label-md transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span> Escalate
+                    </button>
+</div>
+</div>
+<!-- Bottom Section: Resolution Log -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-surface-variant shadow-sm flex flex-col gap-sm mt-auto">
+<h3 class="font-title-md text-title-md text-on-surface flex items-center gap-2 border-b border-surface-variant pb-2">
+<span class="material-symbols-outlined text-on-surface-variant">edit_document</span>
+                    Resolution Log
+                </h3>
+<div class="flex flex-col gap-3 pt-1">
+<div>
+<label class="font-label-md text-[12px] text-on-surface-variant block mb-1">Outcome</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface text-on-surface border border-outline-variant rounded-md py-1.5 pl-3 pr-8 text-[13px] focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer">
+<option disabled="" selected="" value="">Select an outcome...</option>
+<option>Margin Request Denied - Risk</option>
+<option>Account Temporarily Frozen</option>
+<option>User Educated - Monitoring</option>
+<option>Approved with Strict Limits</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">arrow_drop_down</span>
+</div>
+</div>
+<div>
+<label class="font-label-md text-[12px] text-on-surface-variant block mb-1">Analyst Notes (Internal)</label>
+<textarea class="w-full bg-surface text-on-surface border border-outline-variant rounded-md p-2 text-[13px] placeholder-outline focus:ring-1 focus:ring-primary focus:border-primary resize-none custom-scrollbar" placeholder="Document actions taken, user's response, and any follow-up required..." rows="3"></textarea>
+</div>
+<div class="flex justify-between items-center mt-1">
+<span class="text-[11px] text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> Res Time: --:--
+                        </span>
+<button class="bg-surface-tint text-on-primary px-4 py-1.5 rounded-md font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+<span class="material-symbols-outlined text-[16px]">save</span> Save Log
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+</body></html>

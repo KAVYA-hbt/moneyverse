@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { INTRO_TOUR_STEPS } from '../data/introTourSteps.js'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { getIntroTourSteps } from '../data/introTourSteps.js'
 
 const TYPE_SPEED_MS = 18
 
@@ -23,12 +23,13 @@ function markTourComplete(sanitizedUser) {
   }
 }
 
-export function useIntroTour(sanitizedUser) {
+export function useIntroTour(sanitizedUser, language = 'en') {
   const [isActive, setIsActive] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const [visibleChars, setVisibleChars] = useState(0)
   const typingIntervalRef = useRef(null)
 
+  const INTRO_TOUR_STEPS = useMemo(() => getIntroTourSteps(language), [language])
   const currentStep = INTRO_TOUR_STEPS[stepIndex]
   const fullText = currentStep?.text ?? ''
   const isTyping = visibleChars < fullText.length

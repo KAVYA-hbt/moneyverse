@@ -88,6 +88,12 @@ from quest_context.quest_id (e.g. "pan" -> PAN card, "aadhaar" -> Aadhaar/identi
 Tailor tone to user_profile.scenario ('student' vs 'employee') where relevant, but always
 stay on the given topic.
 
+Write every player-facing text field ("question", "options", "hint", "concept_tag",
+"hint_text") in the language given by user_profile.language: "en" = English, "hi" = Hindi
+(Devanagari script), "ta" = Tamil (Tamil script). If user_profile.language is missing or
+unrecognized, default to English. JSON keys themselves always stay in English regardless of
+this setting — only the text values inside them are translated.
+
 You MUST return ONLY raw JSON (no markdown, no code fences, no extra commentary) that matches
 EXACTLY ONE of the following three shapes, chosen by request_type. Do not rename any key. Do not
 nest fields inside another object. Do not turn "options" into a list of objects — it must be a
@@ -122,6 +128,7 @@ class UserProfile(BaseModel):
     email: str = "kavya@example.com"
     name: str = "Kavya"
     scenario: str = "student"
+    language: str = "en"  # "en" | "hi" | "ta" -- see SYSTEM_PROMPT's language instruction
 
 class QuestContext(BaseModel):
     quest_id: Optional[str] = "pan_kendra"
