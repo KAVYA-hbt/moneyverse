@@ -38,6 +38,7 @@ import CompanionWorldModel from '../components/game/CompanionWorldModel.jsx'
 import MiniGameHub from '../components/game/minigames/MiniGameHub.jsx'
 import CompanionDialogueModal from '../components/game/CompanionDialogueModal.jsx'
 import BadgeModal from '../components/game/BadgeModal.jsx'
+import OnboardingAssistantWidget from '../components/game/OnboardingAssistantWidget.jsx'
 import { emitTelemetry } from '../telemetry/telemetryBus.js'
 import { useCompanionNarrative } from '../hooks/useCompanionNarrative.js'
 import { useCompanionNudge } from '../hooks/useCompanionNudge.js'
@@ -414,19 +415,27 @@ export default function GamePage() {
   }, [funnelPrompt])
 
   // PLACEHOLDER TARGET: the real savings-account onboarding page is a
-  // separate build/video, not part of this game. Until that exists,
-  // this intentionally leaves the game entirely and goes to a public
-  // placeholder URL, purely so the click has somewhere real to land for
-  // a demo -- swap ONBOARD_PLACEHOLDER_URL for the real onboarding URL
-  // once it exists, nothing else here needs to change.
-  const ONBOARD_PLACEHOLDER_URL = 'https://www.google.com'
+  // separate build/video, not part of this game. Until that exists, this
+  // points at an iframe-friendly placeholder purely so the widget has
+  // somewhere real to load for a demo -- swap ONBOARD_PLACEHOLDER_URL for
+  // the real onboarding URL once it exists, nothing else here needs to
+  // change. NOTE: google.com (the old placeholder) refuses to be iframed
+  // (X-Frame-Options), which is exactly why this moved off it -- if the
+  // eventual real onboarding URL sends the same header, the widget's
+  // iframe will show blank and players will need the "open in new tab"
+  // escape hatch built into OnboardingAssistantWidget's header.
+  const ONBOARD_PLACEHOLDER_URL = 'https://example.com'
+  // Floating minimizable widget (see OnboardingAssistantWidget.jsx) instead of
+  // window.location.href navigating the whole tab away -- keeps the player
+  // in-world/in-game while they go through onboarding.
+  const [onboardingWidgetOpen, setOnboardingWidgetOpen] = useState(false)
   const handleOnboardClick = useCallback(() => {
     emitTelemetry(profile.email, {
       type: 'onboard_cta_click',
       payload: { level: currentLevel },
     })
     setFunnelPrompt(null)
-    window.location.href = ONBOARD_PLACEHOLDER_URL
+    setOnboardingWidgetOpen(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   // Companion flow state machine — Robot spawns automatically as soon as
@@ -1595,6 +1604,17 @@ export default function GamePage() {
     const tooCloseToNpc = (x, z) =>
       npcPositions.some((pos) => Math.hypot(pos[0] - x, pos[2] - z) < NPC_MIN_DISTANCE)
 
+    // Minimum distance from any treasure chest spot -- treasureSpots (above) and
+    // miniGameSpawns (here) are computed by two completely independent algorithms
+    // (step-through-roads-with-jitter vs fraction-based clearance search) with no
+    // awareness of each other, so without this check a mini-game marker and a
+    // treasure chest marker could land in the same region, same as the NPC overlap
+    // case this file already guards against above.
+    const treasurePositions = (treasureSpots || []).map((t) => t.position)
+    const TREASURE_MIN_DISTANCE = 15
+    const tooCloseToTreasure = (x, z) =>
+      treasurePositions.some((pos) => Math.hypot(pos[0] - x, pos[2] - z) < TREASURE_MIN_DISTANCE)
+
     // Minimum distance from any mini-game spot already placed this pass --
     // without this, two spots can independently pick the same or an
     // adjacent road tile (each only checked clearance from buildings/NPCs,
@@ -1628,7 +1648,7 @@ export default function GamePage() {
           fallbackClearance = clearance
           fallbackBest = { x, z }
         }
-        if (tooCloseToNpc(x, z) || tooCloseToOtherMinigame(x, z)) continue
+        if (tooCloseToNpc(x, z) || tooCloseToOtherMinigame(x, z) || tooCloseToTreasure(x, z)) continue
         if (clearance > bestClearance) {
           bestClearance = clearance
           best = { x, z }
@@ -1639,7 +1659,7 @@ export default function GamePage() {
       spawns[game.id] = chosen ? [chosen.x, ROAD_SURFACE_HEIGHT, chosen.z] : null
     })
     return spawns
-  }, [layout, MINIGAME_TYPES, fixedStoryNpcPositions])
+  }, [layout, MINIGAME_TYPES, fixedStoryNpcPositions, treasureSpots])
 
   // Whichever of the 3 spots (if any) the player is currently standing
   // near -- replaces the old single nearbyMiniGameHub boolean (renamed
@@ -3093,6 +3113,10 @@ export default function GamePage() {
             <p className="funnel-panel-text">{t('game.funnelDeclined')}</p>
           )}
         </div>
+      )}
+
+      {onboardingWidgetOpen && (
+        <OnboardingAssistantWidget url={ONBOARD_PLACEHOLDER_URL} t={t} />
       )}
 
       <IntroTourOverlay tour={introTour} />

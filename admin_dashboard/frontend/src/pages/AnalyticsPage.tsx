@@ -48,12 +48,6 @@ export function AnalyticsPage() {
         </Card>
 
         <Card icon="storefront" title="Product / Category Interest" className="lg:col-span-2">
-          <p className="mb-3 text-xs italic text-on-surface-variant">
-            Mixes two signal shapes: real players show quiz-engagement category labels (e.g.
-            "insurance"), seeded/demo players show specific declared products (e.g.
-            "SIP-Mutual-Fund") — see API_CONTRACT.md for why these aren't merged into one
-            taxonomy.
-          </p>
           <TagBarChart
             data={data.product_interest_counts}
             limit={10}
