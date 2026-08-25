@@ -24,10 +24,16 @@ async def lifespan(app: FastAPI):
     sync_task = None
     if settings.enable_game_sync and not settings.use_mock_profiles:
         sync_task = asyncio.create_task(game_sync.sync_loop())
-        logger.info(
-            "game_sync: querying %s every %ds",
-            settings.game_database_url, settings.profile_sync_interval_seconds,
-        )
+        if settings.use_json_game_sync:
+            logger.info(
+                "game_sync: polling %s every %ds",
+                settings.game_export_json_path, settings.game_sync_json_poll_seconds,
+            )
+        else:
+            logger.info(
+                "game_sync: querying %s every %ds",
+                settings.game_database_url, settings.profile_sync_interval_seconds,
+            )
 
     yield
 

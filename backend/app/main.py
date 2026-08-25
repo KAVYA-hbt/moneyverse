@@ -1,8 +1,9 @@
 import os
 import json
+from pathlib import Path
 from datetime import date, datetime
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, HTTPException, Depends, Request
+from fastapi import FastAPI, Query, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -12,7 +13,7 @@ from openai import OpenAI
 
 # Import your city builder module
 from app.city_builder.generate_layout import generate_full_layout
-from app.db import Base, engine, get_db
+from app.db import Base, engine, get_db, SessionLocal
 from app import models, schemas, profile_builder, mock_profiles
 
 load_dotenv()
@@ -255,7 +256,7 @@ def _player_state_response(player: models.Player) -> schemas.PlayerStateResponse
 
 
 @app.post("/api/player/sync", response_model=schemas.PlayerStateResponse)
-def sync_player(payload: schemas.PlayerSyncRequest, request: Request, db: Session = Depends(get_db)):
+def sync_player(payload: schemas.PlayerSyncRequest, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Call once when the game loads. Creates the player row on first ever
     visit, syncs the daily login streak, and returns their full saved state.
 
@@ -279,6 +280,7 @@ def sync_player(payload: schemas.PlayerSyncRequest, request: Request, db: Sessio
     ))
     db.commit()
     db.refresh(player)
+    background_tasks.add_task(_write_profiles_export_to_disk)
     return _player_state_response(player)
 
 
@@ -291,7 +293,7 @@ def get_player_state(email: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/player/{email}/complete-quest", response_model=schemas.PlayerStateResponse)
-def complete_quest(email: str, payload: schemas.CompleteQuestRequest, db: Session = Depends(get_db)):
+def complete_quest(email: str, payload: schemas.CompleteQuestRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     player = db.query(models.Player).filter(models.Player.email == email).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -319,6 +321,7 @@ def complete_quest(email: str, payload: schemas.CompleteQuestRequest, db: Sessio
         try:
             db.commit()
             db.refresh(player)
+            background_tasks.add_task(_write_profiles_export_to_disk)
         except IntegrityError:
             # Two completion requests for the same quest landed close
             # enough together that both passed the already_done check
@@ -336,7 +339,7 @@ def complete_quest(email: str, payload: schemas.CompleteQuestRequest, db: Sessio
 
 
 @app.post("/api/player/{email}/collect-treasure", response_model=schemas.PlayerStateResponse)
-def collect_treasure(email: str, payload: schemas.CollectTreasureRequest, db: Session = Depends(get_db)):
+def collect_treasure(email: str, payload: schemas.CollectTreasureRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     player = db.query(models.Player).filter(models.Player.email == email).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -367,6 +370,7 @@ def collect_treasure(email: str, payload: schemas.CollectTreasureRequest, db: Se
         try:
             db.commit()
             db.refresh(player)
+            background_tasks.add_task(_write_profiles_export_to_disk)
         except IntegrityError:
             # Same race as complete_quest above -- a duplicate collection
             # request for the same treasure_id landed before the first one
@@ -424,10 +428,15 @@ def get_behavioral_profile(email: str, db: Session = Depends(get_db)):
     return profile
 
 
-@app.get("/api/admin/export-profiles")
-def export_all_profiles(db: Session = Depends(get_db)):
-    """Batch dump, all players, REAL data. One entry per player with both
-    profile JSONs side by side."""
+# Written to disk after every profile-relevant write (see the background-task calls
+# throughout this file) so the admin dashboard can pick up new data by reading a local
+# file instead of opening a direct DB connection -- needed in sandbox deployments where
+# the admin dashboard's process can't reach this backend's Postgres instance. Read by
+# admin_dashboard/backend/app/services/game_sync.py's json_file sync mode.
+SHARED_EXPORT_PATH = Path(__file__).resolve().parents[2] / "shared_data" / "exported_profiles.json"
+
+
+def _build_profiles_export(db: Session) -> dict:
     players = db.query(models.Player).all()
     out = []
     for player in players:
@@ -436,6 +445,25 @@ def export_all_profiles(db: Session = Depends(get_db)):
         fin["last_updated"] = beh["last_updated"] = datetime.utcnow().isoformat()
         out.append({"email": player.email, "financial_behavior": fin, "psychometric": beh})
     return {"count": len(out), "players": out}
+
+
+def _write_profiles_export_to_disk() -> None:
+    """Background-task target -- runs after the response is sent, on its own DB session
+    (the request's session may already be closed by then)."""
+    db = SessionLocal()
+    try:
+        data = _build_profiles_export(db)
+        SHARED_EXPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SHARED_EXPORT_PATH.write_text(json.dumps(data, default=str), encoding="utf-8")
+    finally:
+        db.close()
+
+
+@app.get("/api/admin/export-profiles")
+def export_all_profiles(db: Session = Depends(get_db)):
+    """Batch dump, all players, REAL data. One entry per player with both
+    profile JSONs side by side."""
+    return _build_profiles_export(db)
 
 
 @app.get("/api/admin/mock-profiles")
@@ -457,7 +485,7 @@ def get_mock_profiles(count: int = 10):
 
 
 @app.post("/api/player/{email}/scenario")
-def select_scenario(email: str, payload: schemas.ScenarioSelectRequest, db: Session = Depends(get_db)):
+def select_scenario(email: str, payload: schemas.ScenarioSelectRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     player = db.query(models.Player).filter(models.Player.email == email).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -465,11 +493,12 @@ def select_scenario(email: str, payload: schemas.ScenarioSelectRequest, db: Sess
     player.scenario = payload.scenario
     db.add(models.ScenarioSelectionLog(player_id=player.id, scenario=payload.scenario))
     db.commit()
+    background_tasks.add_task(_write_profiles_export_to_disk)
     return {"scenario": player.scenario}
 
 
 @app.post("/api/player/{email}/quiz-attempt")
-def log_quiz_attempt(email: str, payload: schemas.QuizAttemptLogRequest, db: Session = Depends(get_db)):
+def log_quiz_attempt(email: str, payload: schemas.QuizAttemptLogRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     player = db.query(models.Player).filter(models.Player.email == email).first()
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -491,11 +520,12 @@ def log_quiz_attempt(email: str, payload: schemas.QuizAttemptLogRequest, db: Ses
         suspicious_latency=None if payload.suspicious_latency is None else int(payload.suspicious_latency),
     ))
     db.commit()
+    background_tasks.add_task(_write_profiles_export_to_disk)
     return {"logged": True}
 
 
 @app.post("/api/telemetry/batch")
-def log_telemetry_batch(payload: schemas.TelemetryBatchRequest, db: Session = Depends(get_db)):
+def log_telemetry_batch(payload: schemas.TelemetryBatchRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Decoupled ingestion endpoint — accepts a batch of behavioral events
     from telemetryBus.js. Deliberately tolerant: an unknown player email
@@ -581,6 +611,8 @@ def log_telemetry_batch(payload: schemas.TelemetryBatchRequest, db: Session = De
         # else: unrecognized event type — silently skipped, see docstring.
 
     db.commit()
+    if written:
+        background_tasks.add_task(_write_profiles_export_to_disk)
     return {"logged": written, "received": len(payload.events)}
 
 

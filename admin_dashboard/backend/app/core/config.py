@@ -38,6 +38,22 @@ class Settings(BaseSettings):
     profile_sync_interval_seconds: int = 25
     enable_game_sync: bool = True
 
+    # "db" (default) does the live SQL sync described above via GAME_DATABASE_URL. "json_file"
+    # instead polls a JSON file that the game backend writes to disk after every
+    # profile-relevant change (see backend/app/main.py's _write_profiles_export_to_disk) --
+    # same shape as that backend's GET /api/admin/export-profiles. Use this when this app can't
+    # open a direct DB connection to the game's database (e.g. a locked-down sandbox network),
+    # but both backends' processes share a filesystem.
+    game_sync_source: str = "db"
+    # Only read when game_sync_source="json_file". Relative paths resolve against this file's
+    # own directory (admin_dashboard/backend/), so the default ("../../shared_data/...") points
+    # at <repo root>/shared_data/exported_profiles.json -- the same path the game backend writes
+    # to by default.
+    game_export_json_path: str = "../../shared_data/exported_profiles.json"
+    # Just a local file stat each cycle (no network round trip), so this can be much shorter
+    # than profile_sync_interval_seconds without meaningfully costing anything.
+    game_sync_json_poll_seconds: int = 5
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -45,6 +61,10 @@ class Settings(BaseSettings):
     @property
     def use_mock_profiles(self) -> bool:
         return self.data_source.strip().lower() == "mock"
+
+    @property
+    def use_json_game_sync(self) -> bool:
+        return self.game_sync_source.strip().lower() == "json_file"
 
 
 settings = Settings()

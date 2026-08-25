@@ -47,6 +47,12 @@ export function useHandoffSocket() {
             queryClient.invalidateQueries({
               queryKey: ['handoff-case', caseId],
             });
+          } else if (msg.type === 'profiles_synced') {
+            // Pushed by the game_sync background job (db or json_file mode) whenever it
+            // actually creates/updates a player -- lets the dashboard/stat cards/profile list
+            // reflect new gameplay data without waiting for their own staleTime to expire.
+            queryClient.invalidateQueries({ queryKey: ['profiles'] });
+            queryClient.invalidateQueries({ queryKey: ['profile-analytics'] });
           }
         } catch {
           // ignore malformed frames

@@ -29,6 +29,21 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// A stale/expired token (there's no login page -- see AuthContext's silent dev-account
+// bootstrap) otherwise fails every request forever with no visible error: stat cards just
+// sit in their loading state. Clearing the token and reloading re-triggers that bootstrap
+// login flow, since it only runs when getAuthToken() is empty.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401 && getAuthToken()) {
+      setAuthToken(null);
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  },
+);
+
 export interface ApiError {
   status: number | undefined;
   detail: string;

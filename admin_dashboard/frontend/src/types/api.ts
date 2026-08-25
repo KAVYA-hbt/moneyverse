@@ -277,7 +277,16 @@ export interface WsCaseUpdated {
   case_id: string;
 }
 
-export type WsMessage = WsCaseCreated | WsCaseClaimed | WsCaseUpdated;
+// Pushed whenever the game_sync background job (db or json_file mode -- see
+// admin_dashboard/backend/app/services/game_sync.py) actually created or updated a player.
+export interface WsProfilesSynced {
+  type: 'profiles_synced';
+  created: number;
+  updated: number;
+  total: number;
+}
+
+export type WsMessage = WsCaseCreated | WsCaseClaimed | WsCaseUpdated | WsProfilesSynced;
 
 // ---------- Errors ----------
 
