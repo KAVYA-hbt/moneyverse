@@ -6,6 +6,12 @@
 
 # --- Player data exports (real profile/behavioral data, not source) ---
 admin_dashboard/all_profiles.json
+backend/all_profiles.json
+# Live hand-off file between the game backend and admin dashboard's json_file sync mode
+# (see backend/app/main.py's _write_profiles_export_to_disk and
+# admin_dashboard/backend/app/services/game_sync.py's sync_once_from_json) -- real player
+# data, regenerated automatically, never something to commit.
+/shared_data/
 
 # --- Python backend ---
 __pycache__/
